@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recall — turn anything into flashcards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #1B1F2A;
+    --ink-2: #262B3A;
+    --paper: #FBF8F1;
+    --paper-line: #D8D2C2;
+    --amber: #E8A33D;
+    --teal: #4C7A6E;
+    --text-dark: #23262F;
+    --text-light: #F5F1E8;
+    --text-muted: #A9AFC3;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background: var(--ink);
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(232,163,61,0.07), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(76,122,110,0.10), transparent 40%);
+    color: var(--text-light);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+  }
+  .wrap{ max-width: 780px; margin: 0 auto; padding: 56px 24px 120px; }
+
+  header.hero{ text-align:left; margin-bottom: 56px; }
+  .eyebrow{
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 14px; font-weight:600;
+  }
+  h1{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(38px, 6vw, 58px);
+    line-height: 1.04;
+    margin: 0 0 18px;
+    color: var(--text-light);
+  }
+  h1 em{ font-style: italic; color: var(--amber); font-weight: 600; }
+  .sub{
+    font-size: 15px; line-height:1.6; color: var(--text-muted); max-width: 520px;
+  }
+
+  /* --- Card stack signature in hero --- */
+  .stack-preview{ position:relative; height: 92px; margin: 40px 0 8px; }
+  .mini-card{
+    position:absolute; top:0; left:0; width:150px; height:88px;
+    background: var(--paper); border-radius: 6px 6px 3px 3px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    border-top: 5px solid var(--teal);
+  }
+  .mini-card:nth-child(1){ transform: rotate(-7deg) translateX(0px); z-index:1; }
+  .mini-card:nth-child(2){ transform: rotate(-1deg) translateX(28px); z-index:2; border-top-color: var(--amber);}
+  .mini-card:nth-child(3){ transform: rotate(6deg) translateX(56px); z-index:3; }
+
+  /* --- Form panel --- */
+  .panel{
+    background: var(--ink-2);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 28px;
+    margin-bottom: 40px;
+  }
+  label{
+    display:block; font-size: 11px; text-transform:uppercase; letter-spacing:0.12em;
+    color: var(--text-muted); margin-bottom: 8px; font-weight:600;
+  }
+  .input-tabs{ display:flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tab-btn{
+    padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
+    background: var(--ink); color: var(--text-muted); font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; cursor:pointer; transition: all .15s ease;
+  }
+  .tab-btn.active{ background: var(--teal); color: var(--text-light); border-color: var(--teal); font-weight:600; }
+  .drop-zone{
+    border: 2px dashed rgba(255,255,255,0.16); border-radius: 8px; padding: 36px 20px;
+    text-align:center; cursor:pointer; transition: border-color .15s ease, background .15s ease;
+  }
+  .drop-zone:hover, .drop-zone.dragover{ border-color: var(--amber); background: rgba(232,163,61,0.05); }
+  .drop-label{ font-size: 13px; color: var(--text-muted); }
+  .url-row{ display:flex; gap: 10px; }
+  .url-row input{
+    flex:1; padding: 12px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
+    background: var(--ink); color: var(--text-light); font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  }
+  .fetch-btn{
+    padding: 12px 20px; border-radius: 6px; border: none; background: var(--teal);
+    color: var(--text-light); font-family:'IBM Plex Mono', monospace; font-size: 13px;
+    font-weight:600; cursor:pointer;
+  }
+  .fetch-btn:disabled{ opacity:0.5; cursor:not-allowed; }
+  .extract-status{
+    margin-top: 12px; font-size: 12px; color: var(--text-muted); display:flex; align-items:center; gap:8px;
+  }
+  .extract-status.success{ color: var(--teal); }
+  .extract-status.error{ color: #F4A8A0; }
+  .extract-preview{
+    margin-top: 12px; padding: 12px 14px; border-radius: 6px; background: var(--paper);
+    color: var(--text-dark); font-size: 12px; line-height: 1.6; max-height: 120px; overflow-y:auto;
+    display:none; white-space: pre-wrap;
+  }
+  textarea{
+    width:100%; min-height: 160px; resize: vertical;
+    background: var(--paper); color: var(--text-dark);
+    border: none; border-radius: 6px; padding: 16px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 14px; line-height: 1.6;
+    background-image: repeating-linear-gradient(var(--paper) 0px, var(--paper) 27px, var(--paper-line) 28px);
+  }
+  textarea:focus{ outline: 2px solid var(--amber); outline-offset: 2px; }
+  .row{ display:flex; gap: 16px; margin-top: 20px; flex-wrap: wrap; }
+  .field{ flex: 1; min-width: 140px; }
+  select, input[type=number]{
+    width:100%; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
+    background: var(--ink); color: var(--text-light); font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  }
+  .mode-toggle{ display:flex; gap: 8px; }
+  .mode-btn{
+    flex:1; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
+    background: var(--ink); color: var(--text-muted); font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; cursor:pointer; transition: all .15s ease;
+  }
+  .mode-btn.active{ background: var(--amber); color: var(--ink); border-color: var(--amber); font-weight:600; }
+
+  .generate-btn{
+    margin-top: 24px; width:100%; padding: 15px; border:none; border-radius: 7px;
+    background: var(--amber); color: var(--ink); font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px; font-weight:600; letter-spacing:0.02em; cursor:pointer;
+    transition: transform .1s ease, background .15s ease;
+  }
+  .generate-btn:hover{ background: #f0b558; }
+  .generate-btn:active{ transform: scale(0.98); }
+  .generate-btn:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .error-msg{
+    margin-top: 16px; padding: 12px 14px; border-radius: 6px;
+    background: rgba(220,90,80,0.12); border: 1px solid rgba(220,90,80,0.3);
+    color: #F4A8A0; font-size: 13px;
+  }
+
+  /* --- Results: card deck --- */
+  #results{ display:none; }
+  .deck-header{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;
+  }
+  .deck-count{ font-size: 13px; color: var(--text-muted); }
+  .card-stage{ position:relative; height: 320px; margin-bottom: 20px; }
+  .card{
+    position:absolute; inset:0; background: var(--paper); border-radius: 8px 8px 4px 4px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    border-top: 8px solid var(--teal);
+    padding: 32px 28px;
+    display:flex; flex-direction:column;
+    cursor:pointer;
+    transition: transform .35s cubic-bezier(.2,.9,.3,1);
+    background-image: repeating-linear-gradient(var(--paper) 0px, var(--paper) 31px, var(--paper-line) 32px);
+  }
+  .card .punch{
+    position:absolute; top:14px; left:16px; width:10px; height:10px; border-radius:50%;
+    background: var(--ink); box-shadow: inset 0 2px 3px rgba(0,0,0,0.5);
+  }
+  .card-label{
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--teal); font-weight:600; margin-bottom: 14px; margin-left: 26px;
+  }
+  .card-text{
+    font-family: 'Fraunces', serif; font-size: 22px; line-height: 1.4;
+    color: var(--text-dark); font-weight:500; flex:1; overflow-y:auto;
+  }
+  .card-hint{
+    font-size: 11px; color: #8a8471; text-transform:uppercase; letter-spacing:0.1em;
+    text-align:center; margin-top:12px;
+  }
+  .quiz-options{ display:flex; flex-direction:column; gap: 10px; margin-top: 4px; }
+  .quiz-opt{
+    text-align:left; padding: 10px 14px; border-radius: 5px; border: 1.5px solid var(--paper-line);
+    background: transparent; font-family:'IBM Plex Mono', monospace; font-size: 14px; cursor:pointer;
+    color: var(--text-dark);
+  }
+  .quiz-opt.correct{ background: rgba(76,122,110,0.18); border-color: var(--teal); }
+  .quiz-opt.incorrect{ background: rgba(220,90,80,0.15); border-color: #d65a50; }
+  .quiz-explain{ font-size: 12px; color: #6b6553; margin-top: 10px; font-style:italic; }
+
+  .nav-row{ display:flex; justify-content:space-between; align-items:center; gap: 12px; }
+  .nav-btn{
+    padding: 10px 18px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
+    background: var(--ink-2); color: var(--text-light); font-family:'IBM Plex Mono', monospace;
+    font-size: 13px; cursor:pointer;
+  }
+  .nav-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+  .flip-btn{ background: var(--teal); border-color: var(--teal); color: var(--text-light); font-weight:600; }
+
+  .spinner-wrap{ display:none; align-items:center; gap:10px; margin-top:16px; color: var(--text-muted); font-size:13px; }
+  .spinner{
+    width:16px; height:16px; border-radius:50%; border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: var(--amber); animation: spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg);} }
+
+  footer{ margin-top: 60px; text-align:center; font-size: 12px; color: var(--text-muted); }
+  footer a{ color: var(--amber); text-decoration:none; }
+
+  @media (prefers-reduced-motion: reduce){
+    .card, .generate-btn{ transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">Paste. Generate. Recall.</div>
+    <h1>Turn anything into <em>flashcards</em>.</h1>
+    <p class="sub">Drop in notes, a chapter, an article — get back a real study deck or a quiz, generated on the spot. No sign-up.</p>
+    <div class="stack-preview">
+      <div class="mini-card"></div>
+      <div class="mini-card"></div>
+      <div class="mini-card"></div>
+    </div>
+  </header>
+
+  <div class="panel">
+    <label>Study material</label>
+    <div class="input-tabs">
+      <button type="button" class="tab-btn active" data-tab="paste">Paste text</button>
+      <button type="button" class="tab-btn" data-tab="file">Upload file</button>
+      <button type="button" class="tab-btn" data-tab="url">From URL</button>
+      <button type="button" class="tab-btn" data-tab="photo">Photo</button>
+    </div>
+
+    <div class="tab-panel" id="tab-paste">
+      <textarea id="studyText" placeholder="Paste your notes, an article, a textbook passage — anything you want to learn."></textarea>
+    </div>
+
+    <div class="tab-panel" id="tab-file" style="display:none;">
+      <div class="drop-zone" id="fileDropZone">
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md" hidden>
+        <span class="drop-label">Drop a PDF, DOCX, or TXT file here, or click to choose</span>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-url" style="display:none;">
+      <div class="url-row">
+        <input type="text" id="urlInput" placeholder="https://example.com/article">
+        <button type="button" class="fetch-btn" id="fetchUrlBtn">Fetch</button>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-photo" style="display:none;">
+      <div class="drop-zone" id="photoDropZone">
+        <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+        <span class="drop-label">Take a photo or upload an image of your notes</span>
+      </div>
+    </div>
+
+    <div class="extract-status" id="extractStatus" style="display:none;"></div>
+
+    <div class="row">
+      <div class="field">
+        <label>Format</label>
+        <div class="mode-toggle">
+          <button type="button" class="mode-btn active" data-mode="flashcards">Flashcards</button>
+          <button type="button" class="mode-btn" data-mode="quiz">Quiz</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="count">Count</label>
+        <input type="number" id="count" min="3" max="15" value="8">
+      </div>
+      <div class="field">
+        <label for="difficulty">Difficulty</label>
+        <select id="difficulty">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="generate-btn" id="genBtn">Generate deck</button>
+    <div class="spinner-wrap" id="spinnerWrap"><div class="spinner"></div><span>Building your deck…</span></div>
+    <div class="error-msg" id="errorMsg" style="display:none;"></div>
+  </div>
+
+  <div id="results">
+    <div class="deck-header">
+      <div class="deck-count" id="deckCount">Card 1 of 8</div>
+      <div class="deck-count" id="deckModeLabel">Flashcards</div>
+    </div>
+
+    <div class="card-stage">
+      <div class="card" id="cardEl">
+        <div class="punch"></div>
+        <div class="card-label" id="cardLabel">Front</div>
+        <div class="card-text" id="cardText"></div>
+        <div id="quizOptions" class="quiz-options" style="display:none;"></div>
+        <div class="quiz-explain" id="quizExplain" style="display:none;"></div>
+        <div class="card-hint" id="cardHint">Tap card to flip</div>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nav-btn" id="prevBtn">← Prev</button>
+      <button class="nav-btn flip-btn" id="flipBtn">Flip</button>
+      <button class="nav-btn" id="nextBtn">Next →</button>
+    </div>
+  </div>
+
+  <footer>Built with Mistral · <a href="#" id="resetLink">start a new deck</a></footer>
+</div>
+
+<script>
+// --- Input method tabs ---
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.style.display='none');
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).style.display = 'block';
+  });
+});
+
+const extractStatus = document.getElementById('extractStatus');
+
+function showExtractStatus(msg, type){
+  extractStatus.textContent = msg;
+  extractStatus.className = 'extract-status' + (type ? ' ' + type : '');
+  extractStatus.style.display = 'flex';
+}
+
+function fillStudyText(text){
+  document.getElementById('studyText').value = text;
+  // Switch back to the paste tab so they can see/edit the extracted text
+  document.querySelector('.tab-btn[data-tab="paste"]').click();
+}
+
+async function uploadFile(file){
+  showExtractStatus('Extracting text…');
+  const formData = new FormData();
+  formData.append('file', file);
+  try{
+    const resp = await fetch('/api/extract-file', { method:'POST', body: formData });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Could not extract text.');
+    fillStudyText(data.text);
+    showExtractStatus(`Extracted ${data.text.length.toLocaleString()} characters from ${file.name}`, 'success');
+  }catch(err){
+    showExtractStatus(err.message, 'error');
+  }
+}
+
+// File upload tab
+const fileDropZone = document.getElementById('fileDropZone');
+const fileInput = document.getElementById('fileInput');
+fileDropZone.addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) uploadFile(fileInput.files[0]); });
+['dragover','dragleave','drop'].forEach(evt=>{
+  fileDropZone.addEventListener(evt, e=>{
+    e.preventDefault();
+    fileDropZone.classList.toggle('dragover', evt==='dragover');
+  });
+});
+fileDropZone.addEventListener('drop', e=>{
+  const f = e.dataTransfer.files[0];
+  if(f) uploadFile(f);
+});
+
+// Photo tab
+const photoDropZone = document.getElementById('photoDropZone');
+const photoInput = document.getElementById('photoInput');
+photoDropZone.addEventListener('click', ()=>photoInput.click());
+photoInput.addEventListener('change', ()=>{ if(photoInput.files[0]) uploadFile(photoInput.files[0]); });
+
+// URL tab
+document.getElementById('fetchUrlBtn').addEventListener('click', async ()=>{
+  const url = document.getElementById('urlInput').value.trim();
+  if(!url){ showExtractStatus('Enter a URL first.', 'error'); return; }
+  const btn = document.getElementById('fetchUrlBtn');
+  btn.disabled = true;
+  showExtractStatus('Fetching article…');
+  try{
+    const resp = await fetch('/api/extract-url', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ url })
+    });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Could not fetch that page.');
+    fillStudyText(data.text);
+    showExtractStatus(`Extracted ${data.text.length.toLocaleString()} characters from the page`, 'success');
+  }catch(err){
+    showExtractStatus(err.message, 'error');
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+let mode = 'flashcards';
+let deck = [];
+let idx = 0;
+let flipped = false;
+
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    mode = btn.dataset.mode;
+  });
+});
+
+const genBtn = document.getElementById('genBtn');
+const spinnerWrap = document.getElementById('spinnerWrap');
+const errorMsg = document.getElementById('errorMsg');
+const results = document.getElementById('results');
+
+genBtn.addEventListener('click', async ()=>{
+  const text = document.getElementById('studyText').value.trim();
+  errorMsg.style.display = 'none';
+  if(!text){
+    errorMsg.textContent = 'Paste some study material first.';
+    errorMsg.style.display = 'block';
+    return;
+  }
+  genBtn.disabled = true;
+  spinnerWrap.style.display = 'flex';
+  results.style.display = 'none';
+
+  try{
+    const resp = await fetch('/api/generate', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        text,
+        mode,
+        count: document.getElementById('count').value,
+        difficulty: document.getElementById('difficulty').value
+      })
+    });
+    const data = await resp.json();
+    if(!resp.ok){
+      throw new Error(data.error || 'Something went wrong.');
+    }
+    deck = mode === 'flashcards' ? data.cards : data.questions;
+    if(!deck || !deck.length) throw new Error('No cards were generated. Try different text.');
+    idx = 0;
+    flipped = false;
+    document.getElementById('deckModeLabel').textContent = mode === 'flashcards' ? 'Flashcards' : 'Quiz';
+    document.getElementById('flipBtn').style.display = mode === 'flashcards' ? 'inline-block' : 'none';
+    renderCard();
+    results.style.display = 'block';
+    results.scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(err){
+    errorMsg.textContent = err.message;
+    errorMsg.style.display = 'block';
+  }finally{
+    genBtn.disabled = false;
+    spinnerWrap.style.display = 'none';
+  }
+});
+
+function renderCard(){
+  const item = deck[idx];
+  document.getElementById('deckCount').textContent = `Card ${idx+1} of ${deck.length}`;
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').disabled = idx === deck.length - 1;
+
+  const cardText = document.getElementById('cardText');
+  const cardLabel = document.getElementById('cardLabel');
+  const quizOptions = document.getElementById('quizOptions');
+  const quizExplain = document.getElementById('quizExplain');
+  const cardHint = document.getElementById('cardHint');
+
+  if(mode === 'flashcards'){
+    quizOptions.style.display = 'none';
+    quizExplain.style.display = 'none';
+    cardHint.style.display = 'block';
+    cardLabel.textContent = flipped ? 'Back' : 'Front';
+    cardText.textContent = flipped ? item.back : item.front;
+  } else {
+    cardLabel.textContent = 'Question';
+    cardText.textContent = item.question;
+    cardHint.style.display = 'none';
+    quizExplain.style.display = 'none';
+    quizOptions.style.display = 'flex';
+    quizOptions.innerHTML = '';
+    item.options.forEach((opt, i)=>{
+      const b = document.createElement('button');
+      b.className = 'quiz-opt';
+      b.textContent = opt;
+      b.addEventListener('click', ()=>{
+        document.querySelectorAll('.quiz-opt').forEach(el=>el.disabled = true);
+        if(i === item.correct_index){
+          b.classList.add('correct');
+        } else {
+          b.classList.add('incorrect');
+          quizOptions.children[item.correct_index].classList.add('correct');
+        }
+        if(item.explanation){
+          quizExplain.textContent = item.explanation;
+          quizExplain.style.display = 'block';
+        }
+      });
+      quizOptions.appendChild(b);
+    });
+  }
+}
+
+document.getElementById('cardEl').addEventListener('click', (e)=>{
+  if(mode !== 'flashcards') return;
+  if(e.target.closest('.quiz-opt')) return;
+  flipped = !flipped;
+  renderCard();
+});
+document.getElementById('flipBtn').addEventListener('click', ()=>{
+  flipped = !flipped;
+  renderCard();
+});
+document.getElementById('prevBtn').addEventListener('click', ()=>{
+  if(idx > 0){ idx--; flipped = false; renderCard(); }
+});
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  if(idx < deck.length - 1){ idx++; flipped = false; renderCard(); }
+});
+document.getElementById('resetLink').addEventListener('click', (e)=>{
+  e.preventDefault();
+  results.style.display = 'none';
+  document.getElementById('studyText').value = '';
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+</script>
+</body>
+</html>
