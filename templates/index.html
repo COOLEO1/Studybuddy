@@ -87,7 +87,8 @@
   }
   .drop-zone:hover, .drop-zone.dragover{ border-color: var(--amber); background: rgba(232,163,61,0.05); }
   .drop-label{ font-size: 13px; color: var(--text-muted); }
-  .url-row{ display:flex; gap: 10px; }
+  .url-row{ display:flex; gap: 10px; flex-wrap: wrap; }
+  .url-row input{ min-width: 180px; }
   .url-row input{
     flex:1; padding: 12px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
     background: var(--ink); color: var(--text-light); font-family: 'IBM Plex Mono', monospace; font-size: 13px;
@@ -122,7 +123,53 @@
     width:100%; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
     background: var(--ink); color: var(--text-light); font-family: 'IBM Plex Mono', monospace; font-size: 13px;
   }
-  .mode-toggle{ display:flex; gap: 8px; }
+  .mode-toggle{ display:flex; gap: 8px; flex-wrap: wrap; }
+
+  /* --- Splash screen --- */
+  #splash{
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000;
+    background: var(--ink);
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(232,163,61,0.10), transparent 45%),
+      radial-gradient(circle at 80% 80%, rgba(76,122,110,0.14), transparent 45%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition: opacity 0.6s ease, visibility 0.6s ease;
+  }
+  #splash.fade-out{ opacity: 0; visibility: hidden; pointer-events: none; }
+  .splash-stack{ position:relative; width: 130px; height: 90px; margin-bottom: 34px; }
+  .splash-card{
+    position:absolute; top:0; left:0; width: 130px; height: 78px;
+    background: var(--paper); border-radius: 6px 6px 3px 3px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+    border-top: 5px solid var(--teal);
+    opacity: 0; transform: translateY(14px) rotate(0deg) scale(0.9);
+    animation: cardIn 0.7s cubic-bezier(.2,.9,.3,1) forwards;
+  }
+  .splash-card:nth-child(1){ animation-delay: 0.05s; --r: -8deg; --x: 0px; border-top-color: var(--teal); }
+  .splash-card:nth-child(2){ animation-delay: 0.20s; --r: -1deg; --x: 26px; border-top-color: var(--amber); z-index:2; }
+  .splash-card:nth-child(3){ animation-delay: 0.35s; --r: 7deg; --x: 52px; border-top-color: var(--teal); z-index:3; }
+  @keyframes cardIn{
+    to{ opacity:1; transform: translateY(0) rotate(var(--r)) translateX(var(--x)) scale(1); }
+  }
+  .splash-title{
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(28px, 7vw, 40px);
+    color: var(--text-light); margin: 0; opacity: 0; letter-spacing: -0.01em;
+    animation: fadeUp 0.6s ease forwards; animation-delay: 0.55s;
+  }
+  .splash-title em{ font-style: italic; color: var(--amber); }
+  .splash-byline{
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-muted); margin-top: 10px; opacity: 0;
+    animation: fadeUp 0.6s ease forwards; animation-delay: 0.75s;
+  }
+  @keyframes fadeUp{
+    from{ opacity:0; transform: translateY(8px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .splash-card, .splash-title, .splash-byline{ animation: none; opacity: 1; transform: none; }
+    #splash{ transition: opacity 0.2s ease; }
+  }
   .mode-btn{
     flex:1; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
     background: var(--ink); color: var(--text-muted); font-family: 'IBM Plex Mono', monospace;
@@ -150,14 +197,16 @@
   #results{ display:none; }
   .deck-header{
     display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;
+    flex-wrap: wrap; gap: 8px;
   }
   .deck-count{ font-size: 13px; color: var(--text-muted); }
-  .card-stage{ position:relative; height: 320px; margin-bottom: 20px; }
+  .card-stage{ margin-bottom: 20px; }
   .card{
-    position:absolute; inset:0; background: var(--paper); border-radius: 8px 8px 4px 4px;
+    position:relative; background: var(--paper); border-radius: 8px 8px 4px 4px;
     box-shadow: 0 16px 40px rgba(0,0,0,0.4);
     border-top: 8px solid var(--teal);
-    padding: 32px 28px;
+    padding: 28px 22px 24px;
+    min-height: 260px;
     display:flex; flex-direction:column;
     cursor:pointer;
     transition: transform .35s cubic-bezier(.2,.9,.3,1);
@@ -172,31 +221,31 @@
     color: var(--teal); font-weight:600; margin-bottom: 14px; margin-left: 26px;
   }
   .card-text{
-    font-family: 'Fraunces', serif; font-size: 22px; line-height: 1.4;
-    color: var(--text-dark); font-weight:500; flex:1; overflow-y:auto;
+    font-family: 'Fraunces', serif; font-size: clamp(17px, 4.5vw, 22px); line-height: 1.45;
+    color: var(--text-dark); font-weight:500; word-break: break-word;
   }
   .card-hint{
     font-size: 11px; color: #8a8471; text-transform:uppercase; letter-spacing:0.1em;
-    text-align:center; margin-top:12px;
+    text-align:center; margin-top:18px;
   }
-  .quiz-options{ display:flex; flex-direction:column; gap: 10px; margin-top: 4px; }
+  .quiz-options{ display:flex; flex-direction:column; gap: 10px; margin-top: 18px; }
   .quiz-opt{
-    text-align:left; padding: 10px 14px; border-radius: 5px; border: 1.5px solid var(--paper-line);
-    background: transparent; font-family:'IBM Plex Mono', monospace; font-size: 14px; cursor:pointer;
-    color: var(--text-dark);
+    text-align:left; padding: 12px 14px; border-radius: 5px; border: 1.5px solid var(--paper-line);
+    background: transparent; font-family:'IBM Plex Mono', monospace; font-size: 14px; line-height: 1.45;
+    cursor:pointer; color: var(--text-dark); word-break: break-word;
   }
   .quiz-opt.correct{ background: rgba(76,122,110,0.18); border-color: var(--teal); }
   .quiz-opt.incorrect{ background: rgba(220,90,80,0.15); border-color: #d65a50; }
-  .quiz-explain{ font-size: 12px; color: #6b6553; margin-top: 10px; font-style:italic; }
+  .quiz-explain{ font-size: 12px; color: #6b6553; margin-top: 14px; font-style:italic; line-height:1.5; }
 
-  .nav-row{ display:flex; justify-content:space-between; align-items:center; gap: 12px; }
+  .nav-row{ display:flex; justify-content:space-between; align-items:center; gap: 10px; }
   .nav-btn{
-    padding: 10px 18px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
+    padding: 10px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
     background: var(--ink-2); color: var(--text-light); font-family:'IBM Plex Mono', monospace;
-    font-size: 13px; cursor:pointer;
+    font-size: 13px; cursor:pointer; flex: 1;
   }
   .nav-btn:disabled{ opacity:0.35; cursor:not-allowed; }
-  .flip-btn{ background: var(--teal); border-color: var(--teal); color: var(--text-light); font-weight:600; }
+  .flip-btn{ background: var(--teal); border-color: var(--teal); color: var(--text-light); font-weight:600; flex: 0 0 auto; }
 
   .spinner-wrap{ display:none; align-items:center; gap:10px; margin-top:16px; color: var(--text-muted); font-size:13px; }
   .spinner{
@@ -208,12 +257,31 @@
   footer{ margin-top: 60px; text-align:center; font-size: 12px; color: var(--text-muted); }
   footer a{ color: var(--amber); text-decoration:none; }
 
+  @media (max-width: 480px){
+    .wrap{ padding: 32px 16px 90px; }
+    .panel{ padding: 20px; }
+    .card{ padding: 24px 18px 20px; min-height: 220px; }
+    .row{ gap: 12px; }
+    .url-row{ flex-direction: column; }
+    .url-row .fetch-btn{ width: 100%; }
+    .deck-header{ font-size: 13px; }
+  }
+
   @media (prefers-reduced-motion: reduce){
     .card, .generate-btn{ transition: none; }
   }
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <div class="splash-stack">
+    <div class="splash-card"></div>
+    <div class="splash-card"></div>
+    <div class="splash-card"></div>
+  </div>
+  <h1 class="splash-title">Study <em>Buddy</em></h1>
+  <p class="splash-byline">by Leon Mapelera</p>
+</div>
 <div class="wrap">
 
   <header class="hero">
@@ -241,10 +309,10 @@
     </div>
 
     <div class="tab-panel" id="tab-file" style="display:none;">
-      <div class="drop-zone" id="fileDropZone">
+      <label class="drop-zone" id="fileDropZone" for="fileInput">
         <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md" hidden>
-        <span class="drop-label">Drop a PDF, DOCX, or TXT file here, or click to choose</span>
-      </div>
+        <span class="drop-label">Drop a PDF, DOCX, or TXT file here, or tap to choose</span>
+      </label>
     </div>
 
     <div class="tab-panel" id="tab-url" style="display:none;">
@@ -255,10 +323,10 @@
     </div>
 
     <div class="tab-panel" id="tab-photo" style="display:none;">
-      <div class="drop-zone" id="photoDropZone">
+      <label class="drop-zone" id="photoDropZone" for="photoInput">
         <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
-        <span class="drop-label">Take a photo or upload an image of your notes</span>
-      </div>
+        <span class="drop-label">Tap to take a photo or upload an image of your notes</span>
+      </label>
     </div>
 
     <div class="extract-status" id="extractStatus" style="display:none;"></div>
@@ -318,6 +386,23 @@
 </div>
 
 <script>
+// --- Splash screen ---
+(function(){
+  const splash = document.getElementById('splash');
+  const MIN_DISPLAY_MS = 1400;
+  const start = Date.now();
+  function dismiss(){
+    const elapsed = Date.now() - start;
+    const wait = Math.max(0, MIN_DISPLAY_MS - elapsed);
+    setTimeout(()=>{
+      splash.classList.add('fade-out');
+      setTimeout(()=> splash.remove(), 650);
+    }, wait);
+  }
+  if(document.readyState === 'complete'){ dismiss(); }
+  else{ window.addEventListener('load', dismiss); }
+})();
+
 // --- Input method tabs ---
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -360,7 +445,6 @@ async function uploadFile(file){
 // File upload tab
 const fileDropZone = document.getElementById('fileDropZone');
 const fileInput = document.getElementById('fileInput');
-fileDropZone.addEventListener('click', ()=>fileInput.click());
 fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) uploadFile(fileInput.files[0]); });
 ['dragover','dragleave','drop'].forEach(evt=>{
   fileDropZone.addEventListener(evt, e=>{
@@ -376,7 +460,6 @@ fileDropZone.addEventListener('drop', e=>{
 // Photo tab
 const photoDropZone = document.getElementById('photoDropZone');
 const photoInput = document.getElementById('photoInput');
-photoDropZone.addEventListener('click', ()=>photoInput.click());
 photoInput.addEventListener('change', ()=>{ if(photoInput.files[0]) uploadFile(photoInput.files[0]); });
 
 // URL tab
