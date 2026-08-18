@@ -5,6 +5,7 @@ import base64
 import sqlite3
 import secrets
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, request, jsonify, render_template
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -332,19 +333,27 @@ def generate():
             return jsonify({"error": "The model returned something unexpected. Try again."}), 502
         return jsonify(result)
 
-    # Long input: distribute the requested count across chunks, generate per
-    # chunk, and merge. Each chunk gets at least 2 items.
+    # Long input: distribute the requested count across chunks, generate all
+    # chunks IN PARALLEL (each chunk is a separate Mistral call — running them
+    # concurrently keeps total wait time close to a single call instead of
+    # stacking up sequentially, which risks the server/proxy timing out).
     per_chunk = max(2, count // len(chunks))
-    merged = []
-    for chunk in chunks:
+
+    def generate_chunk(chunk):
         prompt = build_prompt(mode, chunk, per_chunk, difficulty)
         try:
             result = call_mistral(prompt)
-            merged.extend(result.get(key, []))
+            return result.get(key, [])
         except requests.exceptions.RequestException:
-            continue  # skip a failed chunk rather than failing the whole deck
+            return []
         except (KeyError, IndexError, json.JSONDecodeError):
-            continue
+            return []
+
+    merged = []
+    with ThreadPoolExecutor(max_workers=len(chunks)) as executor:
+        futures = [executor.submit(generate_chunk, c) for c in chunks]
+        for future in as_completed(futures):
+            merged.extend(future.result())
 
     if not merged:
         return jsonify({"error": "Couldn't generate a deck from that material. Try again."}), 502
