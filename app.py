@@ -27,8 +27,32 @@ MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 API_URL = "https://api.mistral.ai/v1/chat/completions"
 MODEL = "mistral-large-latest"
 
-# Hard cap on how much text a single request can send, to control token cost
-MAX_INPUT_CHARS = 12000
+# Per-call chunk size (safe single-request size) and total ceiling across chunks.
+CHUNK_SIZE = 12000
+MAX_TOTAL_CHARS = 60000  # ~5 chunks worth — enough for a full play/long chapter
+MAX_CHUNKS = 5
+
+
+def split_into_chunks(text, chunk_size=CHUNK_SIZE):
+    """Split text into chunks near chunk_size, breaking on paragraph boundaries
+    where possible so we don't cut a sentence in half mid-thought."""
+    if len(text) <= chunk_size:
+        return [text]
+    chunks = []
+    remaining = text
+    while remaining:
+        if len(remaining) <= chunk_size:
+            chunks.append(remaining)
+            break
+        window = remaining[:chunk_size]
+        split_at = window.rfind("\n\n")
+        if split_at < chunk_size * 0.5:
+            split_at = window.rfind(". ")
+        if split_at < chunk_size * 0.5:
+            split_at = chunk_size
+        chunks.append(remaining[:split_at].strip())
+        remaining = remaining[split_at:].strip()
+    return chunks
 
 # ---------------------------------------------------------------------------
 # Shared deck storage (SQLite)
@@ -248,7 +272,7 @@ def extract_file():
     if not text.strip():
         return jsonify({"error": "Couldn't find any readable text in that file."}), 400
 
-    return jsonify({"text": text[:MAX_INPUT_CHARS]})
+    return jsonify({"text": text[:MAX_TOTAL_CHARS]})
 
 
 @app.route("/api/extract-url", methods=["POST"])
@@ -267,7 +291,7 @@ def extract_url():
     if not text.strip():
         return jsonify({"error": "Couldn't extract readable article text from that page."}), 400
 
-    return jsonify({"text": text[:MAX_INPUT_CHARS]})
+    return jsonify({"text": text[:MAX_TOTAL_CHARS]})
 
 
 @app.route("/api/generate", methods=["POST"])
@@ -284,8 +308,8 @@ def generate():
 
     if not text:
         return jsonify({"error": "Please paste some study material first."}), 400
-    if len(text) > MAX_INPUT_CHARS:
-        return jsonify({"error": f"Text is too long (max {MAX_INPUT_CHARS} characters)."}), 400
+    if len(text) > MAX_TOTAL_CHARS:
+        return jsonify({"error": f"Text is too long (max {MAX_TOTAL_CHARS:,} characters)."}), 400
     if mode not in ("flashcards", "quiz"):
         return jsonify({"error": "Invalid mode."}), 400
     try:
@@ -295,16 +319,37 @@ def generate():
     if count < 3 or count > 25:
         return jsonify({"error": "Card count must be between 3 and 25."}), 400
 
-    prompt = build_prompt(mode, text, count, difficulty)
+    chunks = split_into_chunks(text)[:MAX_CHUNKS]
+    key = "cards" if mode == "flashcards" else "questions"
 
-    try:
-        result = call_mistral(prompt)
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Upstream API error: {e}"}), 502
-    except (KeyError, IndexError, json.JSONDecodeError):
-        return jsonify({"error": "The model returned something unexpected. Try again."}), 502
+    if len(chunks) == 1:
+        prompt = build_prompt(mode, chunks[0], count, difficulty)
+        try:
+            result = call_mistral(prompt)
+        except requests.exceptions.RequestException as e:
+            return jsonify({"error": f"Upstream API error: {e}"}), 502
+        except (KeyError, IndexError, json.JSONDecodeError):
+            return jsonify({"error": "The model returned something unexpected. Try again."}), 502
+        return jsonify(result)
 
-    return jsonify(result)
+    # Long input: distribute the requested count across chunks, generate per
+    # chunk, and merge. Each chunk gets at least 2 items.
+    per_chunk = max(2, count // len(chunks))
+    merged = []
+    for chunk in chunks:
+        prompt = build_prompt(mode, chunk, per_chunk, difficulty)
+        try:
+            result = call_mistral(prompt)
+            merged.extend(result.get(key, []))
+        except requests.exceptions.RequestException:
+            continue  # skip a failed chunk rather than failing the whole deck
+        except (KeyError, IndexError, json.JSONDecodeError):
+            continue
+
+    if not merged:
+        return jsonify({"error": "Couldn't generate a deck from that material. Try again."}), 502
+
+    return jsonify({key: merged[:count if count >= len(chunks) else len(merged)]})
 
 
 @app.errorhandler(429)

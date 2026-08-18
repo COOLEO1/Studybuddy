@@ -295,7 +295,34 @@
     flex-wrap: wrap; gap: 8px;
   }
   .deck-count{ font-size: 13px; color: var(--text-muted); }
-  .card-stage{ margin-bottom: 20px; }
+  .deck-header-right{ display:flex; align-items:center; gap: 10px; }
+  .exam-timer{
+    font-family:'IBM Plex Mono', monospace; font-size: 12px; font-weight:600;
+    color: var(--teal); border: 1px solid var(--teal); border-radius: 999px; padding: 4px 10px;
+  }
+  .exam-timer.warning{ color: #F4A8A0; border-color: #d65a50; }
+  .card-stage{ margin-bottom: 20px; transition: opacity 0.18s ease, transform 0.18s ease; }
+  .card-stage.transitioning{ opacity: 0; transform: translateY(6px); }
+  .quiz-opt.selected{ background: rgba(232,163,61,0.16); border-color: var(--amber); }
+
+  /* --- Exam review screen --- */
+  .exam-review{ margin-bottom: 20px; }
+  .exam-score{
+    text-align:center; padding: 28px 20px; border-radius: 8px; background: var(--ink-2);
+    margin-bottom: 20px;
+  }
+  .exam-score .score-big{
+    font-family:'Fraunces', serif; font-size: 42px; font-weight:700; color: var(--amber); display:block;
+  }
+  .exam-score .score-label{ font-size: 12px; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; }
+  .exam-review-item{
+    background: var(--paper); border-radius: 6px; padding: 16px; margin-bottom: 10px;
+  }
+  .exam-review-q{ font-family:'Fraunces', serif; font-size: 15px; color: var(--text-dark); margin-bottom: 10px; }
+  .exam-review-answer{ font-size: 12px; font-family:'IBM Plex Mono', monospace; padding: 4px 0; }
+  .exam-review-answer.correct{ color: #2f6b56; }
+  .exam-review-answer.incorrect{ color: #b8493e; }
+  .exam-review-explain{ font-size: 11px; color: #6b6553; font-style:italic; margin-top: 6px; }
   .card{
     position:relative; background: var(--paper); border-radius: 8px 8px 4px 4px;
     box-shadow: 0 16px 40px rgba(0,0,0,0.4);
@@ -395,6 +422,17 @@
   }
   .chip:hover{ border-color: var(--amber); color: var(--amber); }
 
+  .deck-history-bar{ margin-bottom: 24px; }
+  .deck-history-chips{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .history-chip{
+    display:flex; align-items:center; gap: 6px; padding: 7px 12px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.14); background: var(--ink-2); color: var(--text-light);
+    font-family:'IBM Plex Mono', monospace; font-size: 11px; cursor:pointer; transition: all .15s ease;
+  }
+  .history-chip:hover{ border-color: var(--teal); }
+  .history-chip.active{ border-color: var(--amber); color: var(--amber); }
+  .history-chip .hc-mode{ opacity: 0.6; }
+
   /* --- About / footer --- */
   footer{ margin-top: 60px; }
   .footer-links{ text-align:center; font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
@@ -484,6 +522,11 @@
     <button type="button" class="chip" data-example="Photosynthesis is the process by which plants, algae, and some bacteria convert light energy into chemical energy, producing glucose and oxygen from carbon dioxide and water.">Photosynthesis</button>
   </div>
 
+  <div class="deck-history-bar" id="deckHistoryBar" style="display:none;">
+    <span class="quickstart-label">Your decks this session —</span>
+    <div class="deck-history-chips" id="deckHistoryChips"></div>
+  </div>
+
   <div class="panel">
     <label>Study material</label>
     <div class="input-tabs">
@@ -527,6 +570,7 @@
         <div class="mode-toggle">
           <button type="button" class="mode-btn active" data-mode="flashcards">Flashcards</button>
           <button type="button" class="mode-btn" data-mode="quiz">Quiz</button>
+          <button type="button" class="mode-btn" data-mode="exam">Exam</button>
         </div>
       </div>
       <div class="field">
@@ -551,10 +595,13 @@
   <div id="results">
     <div class="deck-header">
       <div class="deck-count" id="deckCount">Card 1 of 8</div>
-      <div class="deck-count" id="deckModeLabel">Flashcards</div>
+      <div class="deck-header-right">
+        <span class="exam-timer" id="examTimer" style="display:none;"></span>
+        <div class="deck-count" id="deckModeLabel">Flashcards</div>
+      </div>
     </div>
 
-    <div class="card-stage">
+    <div class="card-stage" id="cardStage">
       <div class="card" id="cardEl">
         <div class="punch"></div>
         <div class="card-label" id="cardLabel">Front</div>
@@ -565,13 +612,19 @@
       </div>
     </div>
 
-    <div class="nav-row">
+    <div class="nav-row" id="navRow">
       <button class="nav-btn" id="prevBtn">← Prev</button>
       <button class="nav-btn flip-btn" id="flipBtn">Flip</button>
       <button class="nav-btn" id="nextBtn">Next →</button>
     </div>
 
-    <div class="action-row">
+    <div class="exam-review" id="examReview" style="display:none;">
+      <div class="exam-score" id="examScore"></div>
+      <div class="exam-review-list" id="examReviewList"></div>
+      <button type="button" class="generate-btn" id="retakeBtn">Retake exam</button>
+    </div>
+
+    <div class="action-row" id="actionRow">
       <button class="download-btn" id="downloadBtn">⬇ Download (.txt)</button>
       <button class="download-btn" id="shareBtn">🔗 Share link</button>
       <button class="download-btn" id="shareImageBtn">📤 Share card</button>
@@ -604,7 +657,7 @@
     <p>I'm Leon Mapelera. I love building useful tools people can actually use — so I built Study Buddy to help people stop spending too long stuck studying the same topic. Paste in what you're learning, get a real deck back, and go. Work smart 🧠 not hard.</p>
 
     <h3>What this is</h3>
-    <p>Study Buddy turns notes, articles, files, or photos into flashcards or quizzes, generated by AI (Mistral). Paste text, drop a URL, upload a PDF/DOCX/TXT, or snap a photo of a page — get a study deck back in seconds.</p>
+    <p>Study Buddy turns notes, articles, files, or photos into flashcards, quizzes, or timed exams, generated by AI (Mistral). Paste text, drop a URL, upload a PDF/DOCX/TXT, or snap a photo of a page — get a study deck back in seconds. Long material gets automatically split into sections behind the scenes, so even something as long as a full play or book chapter can become a deck.</p>
 
     <h3>How it works</h3>
     <p>Your text (or extracted text from a file/photo/URL) is sent to Mistral's API to generate flashcards or quiz questions. Nothing is required from you to use it — no account, no email, no sign-up.</p>
@@ -737,6 +790,7 @@ document.querySelectorAll('.chip').forEach(chip=>{
 });
 
 let mode = 'flashcards';
+let examMode = false;
 
 // --- Fullscreen reading mode ---
 const readOverlay = document.getElementById('readOverlay');
@@ -760,15 +814,81 @@ document.getElementById('aboutLink').addEventListener('click', (e)=>{
 document.getElementById('closeAboutBtn').addEventListener('click', ()=>{
   aboutOverlay.classList.remove('active');
 });
+
 let deck = [];
 let idx = 0;
 let flipped = false;
+
+// --- Exam mode state ---
+let examAnswers = [];
+let examFinished = false;
+let examTimerInterval = null;
+let examSecondsLeft = 0;
+
+// --- Deck history (this session only) ---
+let deckHistory = [];
+let activeHistoryId = null;
+
+function saveToHistory(){
+  const id = Date.now();
+  const snippet = (document.getElementById('studyText').value || 'Untitled').trim().slice(0, 36);
+  deckHistory.unshift({
+    id, mode, examMode, deck: JSON.parse(JSON.stringify(deck)),
+    title: snippet || 'Untitled deck'
+  });
+  if(deckHistory.length > 10) deckHistory.pop();
+  activeHistoryId = id;
+  renderHistoryChips();
+}
+
+function renderHistoryChips(){
+  const bar = document.getElementById('deckHistoryBar');
+  const chipsEl = document.getElementById('deckHistoryChips');
+  if(!deckHistory.length){ bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  chipsEl.innerHTML = '';
+  deckHistory.forEach(entry=>{
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'history-chip' + (entry.id === activeHistoryId ? ' active' : '');
+    const label = entry.examMode ? 'Exam' : (entry.mode === 'flashcards' ? 'Cards' : 'Quiz');
+    chip.innerHTML = `${entry.title} <span class="hc-mode">· ${label}</span>`;
+    chip.addEventListener('click', ()=> loadFromHistory(entry.id));
+    chipsEl.appendChild(chip);
+  });
+}
+
+function loadFromHistory(id){
+  const entry = deckHistory.find(e => e.id === id);
+  if(!entry) return;
+  deck = JSON.parse(JSON.stringify(entry.deck));
+  mode = entry.mode;
+  examMode = entry.examMode;
+  activeHistoryId = id;
+  idx = 0;
+  flipped = false;
+  examAnswers = new Array(deck.length).fill(null);
+  examFinished = false;
+  stopExamTimer();
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  const btn = document.querySelector(`.mode-btn[data-mode="${examMode ? 'exam' : mode}"]`);
+  if(btn) btn.classList.add('active');
+  setupResultsView();
+  renderHistoryChips();
+  document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+}
 
 document.querySelectorAll('.mode-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    mode = btn.dataset.mode;
+    if(btn.dataset.mode === 'exam'){
+      mode = 'quiz';
+      examMode = true;
+    } else {
+      mode = btn.dataset.mode;
+      examMode = false;
+    }
   });
 });
 
@@ -776,6 +896,13 @@ const genBtn = document.getElementById('genBtn');
 const spinnerWrap = document.getElementById('spinnerWrap');
 const errorMsg = document.getElementById('errorMsg');
 const results = document.getElementById('results');
+
+const LOADING_MESSAGES = [
+  'Reading your material…',
+  'Thinking of good questions…',
+  'Building your deck…',
+  'Almost there…'
+];
 
 genBtn.addEventListener('click', async ()=>{
   const text = document.getElementById('studyText').value.trim();
@@ -788,6 +915,14 @@ genBtn.addEventListener('click', async ()=>{
   genBtn.disabled = true;
   spinnerWrap.style.display = 'flex';
   results.style.display = 'none';
+
+  let msgIdx = 0;
+  const spinnerLabel = spinnerWrap.querySelector('span');
+  spinnerLabel.textContent = LOADING_MESSAGES[0];
+  const msgInterval = setInterval(()=>{
+    msgIdx = (msgIdx + 1) % LOADING_MESSAGES.length;
+    spinnerLabel.textContent = LOADING_MESSAGES[msgIdx];
+  }, 1800);
 
   try{
     const resp = await fetch('/api/generate', {
@@ -808,25 +943,78 @@ genBtn.addEventListener('click', async ()=>{
     if(!deck || !deck.length) throw new Error('No cards were generated. Try different text.');
     idx = 0;
     flipped = false;
-    document.getElementById('deckModeLabel').textContent = mode === 'flashcards' ? 'Flashcards' : 'Quiz';
-    document.getElementById('flipBtn').style.display = mode === 'flashcards' ? 'inline-block' : 'none';
-    renderCard();
-    results.style.display = 'block';
+    saveToHistory();
+    setupResultsView();
     results.scrollIntoView({behavior:'smooth', block:'start'});
   }catch(err){
     errorMsg.textContent = err.message;
     errorMsg.style.display = 'block';
   }finally{
+    clearInterval(msgInterval);
     genBtn.disabled = false;
     spinnerWrap.style.display = 'none';
   }
 });
 
+function setupResultsView(){
+  const label = examMode ? 'Exam' : (mode === 'flashcards' ? 'Flashcards' : 'Quiz');
+  document.getElementById('deckModeLabel').textContent = label;
+  document.getElementById('flipBtn').style.display = (mode === 'flashcards' && !examMode) ? 'inline-block' : 'none';
+  document.getElementById('examReview').style.display = 'none';
+  document.getElementById('cardStage').style.display = 'block';
+  document.getElementById('navRow').style.display = 'flex';
+  document.getElementById('actionRow').style.display = 'flex';
+
+  if(examMode){
+    examAnswers = new Array(deck.length).fill(null);
+    examFinished = false;
+    startExamTimer();
+  } else {
+    stopExamTimer();
+    document.getElementById('examTimer').style.display = 'none';
+  }
+  renderCard();
+  results.style.display = 'block';
+}
+
+// --- Exam timer ---
+function startExamTimer(){
+  stopExamTimer();
+  examSecondsLeft = deck.length * 45;
+  const timerEl = document.getElementById('examTimer');
+  timerEl.style.display = 'inline-block';
+  updateTimerDisplay();
+  examTimerInterval = setInterval(()=>{
+    examSecondsLeft--;
+    updateTimerDisplay();
+    if(examSecondsLeft <= 0){
+      finishExam();
+    }
+  }, 1000);
+}
+function stopExamTimer(){
+  if(examTimerInterval){ clearInterval(examTimerInterval); examTimerInterval = null; }
+}
+function updateTimerDisplay(){
+  const timerEl = document.getElementById('examTimer');
+  const m = Math.floor(Math.max(0,examSecondsLeft) / 60);
+  const s = Math.max(0,examSecondsLeft) % 60;
+  timerEl.textContent = `⏱ ${m}:${String(s).padStart(2,'0')}`;
+  timerEl.classList.toggle('warning', examSecondsLeft <= 30);
+}
+
 function renderCard(){
   const item = deck[idx];
-  document.getElementById('deckCount').textContent = `Card ${idx+1} of ${deck.length}`;
+  document.getElementById('deckCount').textContent = `${examMode ? 'Question' : 'Card'} ${idx+1} of ${deck.length}`;
   document.getElementById('prevBtn').disabled = idx === 0;
-  document.getElementById('nextBtn').disabled = idx === deck.length - 1;
+  const nextBtn = document.getElementById('nextBtn');
+  if(examMode && idx === deck.length - 1){
+    nextBtn.textContent = 'Finish Exam';
+    nextBtn.disabled = false;
+  } else {
+    nextBtn.textContent = 'Next →';
+    nextBtn.disabled = idx === deck.length - 1;
+  }
 
   const cardText = document.getElementById('cardText');
   const cardLabel = document.getElementById('cardLabel');
@@ -834,12 +1022,29 @@ function renderCard(){
   const quizExplain = document.getElementById('quizExplain');
   const cardHint = document.getElementById('cardHint');
 
-  if(mode === 'flashcards'){
+  if(mode === 'flashcards' && !examMode){
     quizOptions.style.display = 'none';
     quizExplain.style.display = 'none';
     cardHint.style.display = 'block';
     cardLabel.textContent = flipped ? 'Back' : 'Front';
     cardText.textContent = flipped ? item.back : item.front;
+  } else if(examMode){
+    cardLabel.textContent = 'Question';
+    cardText.textContent = item.question;
+    cardHint.style.display = 'none';
+    quizExplain.style.display = 'none';
+    quizOptions.style.display = 'flex';
+    quizOptions.innerHTML = '';
+    item.options.forEach((opt, i)=>{
+      const b = document.createElement('button');
+      b.className = 'quiz-opt' + (examAnswers[idx] === i ? ' selected' : '');
+      b.textContent = opt;
+      b.addEventListener('click', ()=>{
+        examAnswers[idx] = i;
+        renderCard();
+      });
+      quizOptions.appendChild(b);
+    });
   } else {
     cardLabel.textContent = 'Question';
     cardText.textContent = item.question;
@@ -869,8 +1074,17 @@ function renderCard(){
   }
 }
 
+function transitionToCard(fn){
+  const stage = document.getElementById('cardStage');
+  stage.classList.add('transitioning');
+  setTimeout(()=>{
+    fn();
+    stage.classList.remove('transitioning');
+  }, 160);
+}
+
 document.getElementById('cardEl').addEventListener('click', (e)=>{
-  if(mode !== 'flashcards') return;
+  if(mode !== 'flashcards' || examMode) return;
   if(e.target.closest('.quiz-opt')) return;
   flipped = !flipped;
   renderCard();
@@ -880,15 +1094,69 @@ document.getElementById('flipBtn').addEventListener('click', ()=>{
   renderCard();
 });
 document.getElementById('prevBtn').addEventListener('click', ()=>{
-  if(idx > 0){ idx--; flipped = false; renderCard(); }
+  if(idx > 0){ idx--; flipped = false; transitionToCard(renderCard); }
 });
 document.getElementById('nextBtn').addEventListener('click', ()=>{
-  if(idx < deck.length - 1){ idx++; flipped = false; renderCard(); }
+  if(examMode && idx === deck.length - 1){
+    finishExam();
+    return;
+  }
+  if(idx < deck.length - 1){ idx++; flipped = false; transitionToCard(renderCard); }
+});
+
+function finishExam(){
+  if(examFinished) return;
+  examFinished = true;
+  stopExamTimer();
+  document.getElementById('examTimer').style.display = 'none';
+  document.getElementById('cardStage').style.display = 'none';
+  document.getElementById('navRow').style.display = 'none';
+
+  let correctCount = 0;
+  const listEl = document.getElementById('examReviewList');
+  listEl.innerHTML = '';
+  deck.forEach((item, i)=>{
+    const userAns = examAnswers[i];
+    const isCorrect = userAns === item.correct_index;
+    if(isCorrect) correctCount++;
+    const div = document.createElement('div');
+    div.className = 'exam-review-item';
+    const userAnsText = userAns === null ? 'No answer' : item.options[userAns];
+    div.innerHTML = `
+      <div class="exam-review-q">${i+1}. ${item.question}</div>
+      <div class="exam-review-answer ${isCorrect ? 'correct' : 'incorrect'}">
+        ${isCorrect ? '✓' : '✗'} Your answer: ${userAnsText}
+      </div>
+      ${!isCorrect ? `<div class="exam-review-answer correct">✓ Correct answer: ${item.options[item.correct_index]}</div>` : ''}
+      ${item.explanation ? `<div class="exam-review-explain">${item.explanation}</div>` : ''}
+    `;
+    listEl.appendChild(div);
+  });
+
+  const pct = Math.round((correctCount / deck.length) * 100);
+  document.getElementById('examScore').innerHTML = `
+    <span class="score-big">${correctCount}/${deck.length}</span>
+    <span class="score-label">${pct}% correct</span>
+  `;
+  document.getElementById('examReview').style.display = 'block';
+  document.getElementById('examReview').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+document.getElementById('retakeBtn').addEventListener('click', ()=>{
+  idx = 0;
+  examAnswers = new Array(deck.length).fill(null);
+  examFinished = false;
+  document.getElementById('examReview').style.display = 'none';
+  document.getElementById('cardStage').style.display = 'block';
+  document.getElementById('navRow').style.display = 'flex';
+  startExamTimer();
+  renderCard();
 });
 
 document.getElementById('downloadBtn').addEventListener('click', ()=>{
   if(!deck.length) return;
-  let text = `STUDY BUDDY — ${mode === 'flashcards' ? 'Flashcards' : 'Quiz'} Deck\n`;
+  const label = examMode ? 'Exam' : (mode === 'flashcards' ? 'Flashcards' : 'Quiz');
+  let text = `STUDY BUDDY — ${label} Deck\n`;
   text += `Generated by Recall · studybuddy\n`;
   text += `${'='.repeat(50)}\n\n`;
   deck.forEach((item, i)=>{
@@ -971,20 +1239,30 @@ document.getElementById('shareImageBtn').addEventListener('click', async ()=>{
   const originalLabel = btn.textContent;
   btn.textContent = 'Preparing…';
   try{
-    const canvas = await html2canvas(cardEl, {backgroundColor: '#FBF8F1', scale: 2});
-    const ctx = canvas.getContext('2d');
+    const cardCanvas = await html2canvas(cardEl, {backgroundColor: '#FBF8F1', scale: 2});
 
-    // Watermark bar at the bottom
-    const barHeight = Math.round(canvas.height * 0.07);
-    ctx.fillStyle = 'rgba(27,31,42,0.88)';
-    ctx.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
+    // Build a fresh canvas: card image on top, a dedicated watermark strip below.
+    // (Drawing on a brand-new canvas avoids any quirks with re-using html2canvas's
+    // internal canvas/context on some mobile browsers.)
+    const barHeight = Math.max(90, Math.round(cardCanvas.height * 0.08));
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = cardCanvas.width;
+    finalCanvas.height = cardCanvas.height + barHeight;
+    const ctx = finalCanvas.getContext('2d');
+
+    // Card image
+    ctx.drawImage(cardCanvas, 0, 0);
+
+    // Watermark strip
+    ctx.fillStyle = '#1B1F2A';
+    ctx.fillRect(0, cardCanvas.height, finalCanvas.width, barHeight);
     ctx.fillStyle = '#E8A33D';
-    ctx.font = `${Math.round(barHeight*0.42)}px monospace`;
+    ctx.font = `bold ${Math.round(barHeight * 0.34)}px monospace, sans-serif`;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
-    ctx.fillText('Leo · Study Buddy', canvas.width/2, canvas.height - barHeight/2);
+    ctx.fillText('Leo · Study Buddy', finalCanvas.width / 2, cardCanvas.height + barHeight / 2);
 
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const blob = await new Promise(resolve => finalCanvas.toBlob(resolve, 'image/png'));
     const file = new File([blob], 'study-buddy-card.png', {type: 'image/png'});
 
     if(navigator.canShare && navigator.canShare({files: [file]})){
@@ -1024,12 +1302,10 @@ if(SHARE_ID){
       if(!resp.ok) throw new Error(data.error || 'Could not load this shared deck.');
       deck = data.deck;
       mode = data.mode;
+      examMode = false;
       idx = 0;
       flipped = false;
-      document.getElementById('deckModeLabel').textContent = mode === 'flashcards' ? 'Flashcards' : 'Quiz';
-      document.getElementById('flipBtn').style.display = mode === 'flashcards' ? 'inline-block' : 'none';
-      renderCard();
-      document.getElementById('results').style.display = 'block';
+      setupResultsView();
       window.addEventListener('load', ()=>{
         document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
       });
@@ -1040,6 +1316,7 @@ if(SHARE_ID){
 }
 document.getElementById('resetLink').addEventListener('click', (e)=>{
   e.preventDefault();
+  stopExamTimer();
   results.style.display = 'none';
   document.getElementById('studyText').value = '';
   window.scrollTo({top:0, behavior:'smooth'});

@@ -37,10 +37,14 @@ Visit http://localhost:5000
 ## Cost control (already built in)
 
 - Rate limit: 10 requests/minute and 60/hour per visitor IP (in-memory — resets on restart; fine for a small public app).
-- Input capped at 12,000 characters per request.
-- Card count capped at 3–15 per generation.
+- Input capped at 60,000 characters total. Text over ~12,000 characters is automatically split into up to 5 chunks (on paragraph boundaries), generated separately, and merged into one deck — so long material like a full play or book chapter still works.
+- Card count capped at 3–25 per generation.
+
+## Shared decks (SQLite)
+
+The "Share deck" feature stores decks in a local SQLite file (`shared_decks.db`). On Render's free tier, disk storage can be wiped on redeploys or when a service is rebuilt from scratch — shared links may stop working after that happens. For guaranteed-permanent links, swap this for a hosted database (e.g. Render's free Postgres tier) later.
 
 If it gets popular and you want tighter control, consider:
 - Lowering the rate limits in `app.py` (`Limiter` config).
-- Switching `storage_uri` to Redis so limits persist across restarts/instances.
+- Switching `storage_uri` to Redis so rate limits persist across restarts/instances.
 - Adding a daily global request cap.
