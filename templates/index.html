@@ -3,9 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Recall — turn anything into flashcards</title>
+<title>Study Buddy — turn anything into flashcards</title>
+<meta name="author" content="Leon Mapelera">
+<meta name="description" content="Turn notes, articles, files, or photos into flashcards and quizzes. Built by Leon Mapelera, from Zomba, Malawi.">
+
+<!-- Open Graph / link preview tags -->
+<meta property="og:title" content="Study Buddy — by Leon Mapelera">
+<meta property="og:description" content="Turn anything into flashcards or a quiz. Free, no sign-up.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="/static/icons/icon-512.png">
+
+<!-- Home screen / PWA icons -->
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#1B1F2A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Study Buddy">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     --ink: #1B1F2A;
@@ -116,6 +134,52 @@
     font-family: 'IBM Plex Mono', monospace; font-size: 14px; line-height: 1.6;
     background-image: repeating-linear-gradient(var(--paper) 0px, var(--paper) 27px, var(--paper-line) 28px);
   }
+  .fullscreen-btn{
+    margin-top: 10px; padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
+    background: transparent; color: var(--text-muted); font-family:'IBM Plex Mono', monospace;
+    font-size: 12px; cursor:pointer; transition: all .15s ease;
+  }
+  .fullscreen-btn:hover{ border-color: var(--amber); color: var(--amber); }
+
+  /* --- Fullscreen reading overlay --- */
+  .read-overlay{
+    position: fixed; top:0; left:0; right:0; bottom:0; z-index: 900;
+    background: var(--ink); display:none; flex-direction:column; padding: 20px;
+  }
+  .read-overlay.active{ display:flex; }
+  .read-overlay-header{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-transform:uppercase;
+    letter-spacing: 0.1em; color: var(--text-muted);
+  }
+  .read-close-btn{
+    padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.16);
+    background: var(--ink-2); color: var(--text-light); font-family:'IBM Plex Mono', monospace;
+    font-size: 12px; cursor:pointer;
+  }
+  .read-overlay-text{
+    flex:1; width:100%; resize:none; background: var(--paper); color: var(--text-dark);
+    border:none; border-radius: 8px; padding: 24px; font-family:'IBM Plex Mono', monospace;
+    font-size: 15px; line-height: 1.8;
+    background-image: repeating-linear-gradient(var(--paper) 0px, var(--paper) 33px, var(--paper-line) 34px);
+  }
+  .about-overlay .about-content{
+    flex:1; overflow-y:auto; max-width: 640px; margin: 0 auto; width:100%;
+    padding: 8px 4px 40px;
+  }
+  .about-content h2{
+    font-family:'Fraunces', serif; font-size: 26px; color: var(--text-light); margin: 0 0 4px;
+  }
+  .about-tagline{ color: var(--amber); font-size: 13px; margin: 0 0 28px; font-family:'IBM Plex Mono', monospace; }
+  .about-content h3{
+    font-family:'IBM Plex Mono', monospace; font-size: 12px; text-transform:uppercase; letter-spacing:0.1em;
+    color: var(--teal); margin: 26px 0 10px;
+  }
+  .about-content p{ font-size: 13px; line-height: 1.75; color: var(--text-muted); margin: 0 0 4px; }
+  .about-content strong{ color: var(--text-light); }
+  .about-content a{ color: var(--amber); text-decoration: none; }
+  .about-content a:hover{ text-decoration: underline; }
+  .about-content .about-fine{ font-size: 12px; opacity: 0.8; }
   textarea:focus{ outline: 2px solid var(--amber); outline-offset: 2px; }
   .row{ display:flex; gap: 16px; margin-top: 20px; flex-wrap: wrap; }
   .field{ flex: 1; min-width: 140px; }
@@ -136,38 +200,69 @@
     transition: opacity 0.6s ease, visibility 0.6s ease;
   }
   #splash.fade-out{ opacity: 0; visibility: hidden; pointer-events: none; }
-  .splash-stack{ position:relative; width: 130px; height: 90px; margin-bottom: 34px; }
+  .splash-stack{ position:relative; width: 130px; height: 100px; margin-bottom: 28px; }
   .splash-card{
     position:absolute; top:0; left:0; width: 130px; height: 78px;
     background: var(--paper); border-radius: 6px 6px 3px 3px;
     box-shadow: 0 10px 24px rgba(0,0,0,0.4);
     border-top: 5px solid var(--teal);
     opacity: 0; transform: translateY(14px) rotate(0deg) scale(0.9);
-    animation: cardIn 0.7s cubic-bezier(.2,.9,.3,1) forwards;
+    animation: cardIn 0.6s cubic-bezier(.2,.9,.3,1) forwards, cardOut 0.4s ease forwards;
+    animation-delay: 0.05s, 0.85s;
   }
-  .splash-card:nth-child(1){ animation-delay: 0.05s; --r: -8deg; --x: 0px; border-top-color: var(--teal); }
-  .splash-card:nth-child(2){ animation-delay: 0.20s; --r: -1deg; --x: 26px; border-top-color: var(--amber); z-index:2; }
-  .splash-card:nth-child(3){ animation-delay: 0.35s; --r: 7deg; --x: 52px; border-top-color: var(--teal); z-index:3; }
+  .splash-card:nth-child(1){ --r: -8deg; --x: 0px; border-top-color: var(--teal); }
+  .splash-card:nth-child(2){ animation-delay: 0.18s, 0.85s; --r: -1deg; --x: 26px; border-top-color: var(--amber); z-index:2; }
+  .splash-card:nth-child(3){ animation-delay: 0.31s, 0.85s; --r: 7deg; --x: 52px; border-top-color: var(--teal); z-index:3; }
   @keyframes cardIn{
     to{ opacity:1; transform: translateY(0) rotate(var(--r)) translateX(var(--x)) scale(1); }
   }
+  @keyframes cardOut{
+    to{ opacity:0; transform: translateY(-6px) rotate(var(--r)) translateX(var(--x)) scale(0.85); }
+  }
+  .logo-badge{
+    position:absolute; top:50%; left:50%; width: 64px; height: 64px;
+    margin: -32px 0 0 -32px; border-radius: 50%;
+    background: var(--ink); border: 2px solid var(--amber);
+    display:flex; align-items:center; justify-content:center;
+    font-family: 'Fraunces', serif; font-weight: 700; font-size: 22px; color: var(--amber);
+    opacity: 0; transform: scale(0.4) rotate(-25deg);
+    animation: badgeIn 0.55s cubic-bezier(.2,.9,.3,1) forwards;
+    animation-delay: 0.95s;
+  }
+  .logo-badge::before{
+    content:''; position:absolute; inset:-10px; border-radius:50%;
+    border: 1.5px solid rgba(232,163,61,0.5);
+    opacity:0; animation: ringPulse 1s ease-out forwards; animation-delay: 1.15s;
+  }
+  @keyframes badgeIn{
+    to{ opacity:1; transform: scale(1) rotate(0deg); }
+  }
+  @keyframes ringPulse{
+    0%{ opacity: 0.8; transform: scale(0.8); }
+    100%{ opacity: 0; transform: scale(1.6); }
+  }
   .splash-title{
-    font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(28px, 7vw, 40px);
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(26px, 6.5vw, 36px);
     color: var(--text-light); margin: 0; opacity: 0; letter-spacing: -0.01em;
-    animation: fadeUp 0.6s ease forwards; animation-delay: 0.55s;
+    animation: fadeUp 0.6s ease forwards; animation-delay: 1.25s;
   }
   .splash-title em{ font-style: italic; color: var(--amber); }
   .splash-byline{
-    font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--text-muted); margin-top: 10px; opacity: 0;
-    animation: fadeUp 0.6s ease forwards; animation-delay: 0.75s;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    color: var(--text-light); margin-top: 16px; opacity: 0; font-weight: 600;
+    animation: fadeUp 0.6s ease forwards; animation-delay: 1.42s;
+  }
+  .splash-location{
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-muted); margin-top: 6px; opacity: 0;
+    animation: fadeUp 0.6s ease forwards; animation-delay: 1.55s;
   }
   @keyframes fadeUp{
     from{ opacity:0; transform: translateY(8px); }
     to{ opacity:1; transform: translateY(0); }
   }
   @media (prefers-reduced-motion: reduce){
-    .splash-card, .splash-title, .splash-byline{ animation: none; opacity: 1; transform: none; }
+    .splash-card, .splash-title, .splash-byline, .splash-location, .logo-badge, .logo-badge::before{ animation: none; opacity: 1; transform: none; }
     #splash{ transition: opacity 0.2s ease; }
   }
   .mode-btn{
@@ -246,6 +341,25 @@
   }
   .nav-btn:disabled{ opacity:0.35; cursor:not-allowed; }
   .flip-btn{ background: var(--teal); border-color: var(--teal); color: var(--text-light); font-weight:600; flex: 0 0 auto; }
+  .download-btn{
+    flex: 1; margin-top: 0; padding: 12px; border-radius: 6px; border: 1px dashed rgba(255,255,255,0.2);
+    background: transparent; color: var(--text-muted); font-family:'IBM Plex Mono', monospace;
+    font-size: 12px; cursor:pointer; transition: all .15s ease;
+  }
+  .download-btn:hover{ border-color: var(--amber); color: var(--amber); }
+  .action-row{ display:flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .share-result{
+    display:flex; gap: 8px; margin-top: 12px;
+  }
+  .share-result input{
+    flex:1; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
+    background: var(--ink); color: var(--amber); font-family:'IBM Plex Mono', monospace; font-size: 12px;
+  }
+  .copy-share-btn{
+    padding: 10px 16px; border-radius: 6px; border: none; background: var(--amber);
+    color: var(--ink); font-family:'IBM Plex Mono', monospace; font-size: 12px; font-weight:600; cursor:pointer;
+  }
+  .copy-share-btn.copied{ background: var(--teal); color: var(--text-light); }
 
   .spinner-wrap{ display:none; align-items:center; gap:10px; margin-top:16px; color: var(--text-muted); font-size:13px; }
   .spinner{
@@ -254,8 +368,49 @@
   }
   @keyframes spin{ to{ transform: rotate(360deg);} }
 
-  footer{ margin-top: 60px; text-align:center; font-size: 12px; color: var(--text-muted); }
-  footer a{ color: var(--amber); text-decoration:none; }
+  /* --- How it works strip --- */
+  .how-it-works{
+    display:flex; align-items:center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 28px; padding: 18px 20px; border-radius: 8px;
+    background: var(--ink-2); border: 1px solid rgba(255,255,255,0.06);
+  }
+  .hiw-step{ display:flex; align-items:center; gap: 10px; }
+  .hiw-num{
+    font-family: 'Fraunces', serif; font-size: 13px; font-weight:600; color: var(--amber);
+    border: 1px solid rgba(232,163,61,0.4); border-radius: 50%; width: 26px; height:26px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .hiw-text{ font-size: 12px; color: var(--text-muted); line-height:1.4; }
+  .hiw-arrow{ color: var(--text-muted); opacity: 0.5; font-size: 14px; }
+
+  /* --- Quickstart chips --- */
+  .quickstart{
+    display:flex; align-items:center; gap: 8px; flex-wrap: wrap; margin-bottom: 32px;
+  }
+  .quickstart-label{ font-size: 12px; color: var(--text-muted); margin-right: 2px; }
+  .chip{
+    padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14);
+    background: transparent; color: var(--text-light); font-family:'IBM Plex Mono', monospace;
+    font-size: 12px; cursor:pointer; transition: all .15s ease;
+  }
+  .chip:hover{ border-color: var(--amber); color: var(--amber); }
+
+  /* --- About / footer --- */
+  footer{ margin-top: 60px; }
+  .footer-links{ text-align:center; font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
+  .footer-links a{ color: var(--amber); text-decoration:none; }
+  .about-box{
+    max-width: 460px; margin: 0 auto; text-align:center; padding-top: 24px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .about-box p{ font-size: 12px; color: var(--text-muted); line-height:1.7; margin: 0 0 10px; }
+  .about-box strong{ color: var(--text-light); }
+  .about-fine{ font-size: 11px; opacity: 0.75; }
+
+  @media (max-width: 480px){
+    .how-it-works{ flex-direction: column; align-items:flex-start; gap: 10px; }
+    .hiw-arrow{ display:none; }
+  }
 
   @media (max-width: 480px){
     .wrap{ padding: 32px 16px 90px; }
@@ -278,9 +433,19 @@
     <div class="splash-card"></div>
     <div class="splash-card"></div>
     <div class="splash-card"></div>
+    <div class="logo-badge">SB</div>
   </div>
   <h1 class="splash-title">Study <em>Buddy</em></h1>
-  <p class="splash-byline">by Leon Mapelera</p>
+  <p class="splash-byline">Leon Mapelera</p>
+  <p class="splash-location">From Zomba, Malawi</p>
+</div>
+
+<div id="readOverlay" class="read-overlay">
+  <div class="read-overlay-header">
+    <span>Reading mode</span>
+    <button type="button" id="closeReadBtn" class="read-close-btn">✕ Close</button>
+  </div>
+  <textarea id="readOverlayText" class="read-overlay-text"></textarea>
 </div>
 <div class="wrap">
 
@@ -295,6 +460,30 @@
     </div>
   </header>
 
+  <section class="how-it-works">
+    <div class="hiw-step">
+      <span class="hiw-num">01</span>
+      <span class="hiw-text">Paste text, a URL, a file, or a photo</span>
+    </div>
+    <div class="hiw-arrow">→</div>
+    <div class="hiw-step">
+      <span class="hiw-num">02</span>
+      <span class="hiw-text">Pick flashcards or a quiz</span>
+    </div>
+    <div class="hiw-arrow">→</div>
+    <div class="hiw-step">
+      <span class="hiw-num">03</span>
+      <span class="hiw-text">Study your generated deck</span>
+    </div>
+  </section>
+
+  <div class="quickstart">
+    <span class="quickstart-label">Try an example —</span>
+    <button type="button" class="chip" data-example="Macbeth by William Shakespeare — the tragedy of a Scottish general driven by ambition and prophecy to murder his king and seize the throne, only to be consumed by guilt and paranoia.">Macbeth</button>
+    <button type="button" class="chip" data-example="The French Revolution (1789–1799) was a period of radical political and societal change in France that overthrew the monarchy, established a republic, and led to the rise of Napoleon Bonaparte.">French Revolution</button>
+    <button type="button" class="chip" data-example="Photosynthesis is the process by which plants, algae, and some bacteria convert light energy into chemical energy, producing glucose and oxygen from carbon dioxide and water.">Photosynthesis</button>
+  </div>
+
   <div class="panel">
     <label>Study material</label>
     <div class="input-tabs">
@@ -306,6 +495,7 @@
 
     <div class="tab-panel" id="tab-paste">
       <textarea id="studyText" placeholder="Paste your notes, an article, a textbook passage — anything you want to learn."></textarea>
+      <button type="button" class="fullscreen-btn" id="fullscreenBtn">⤢ Read fullscreen</button>
     </div>
 
     <div class="tab-panel" id="tab-file" style="display:none;">
@@ -341,7 +531,7 @@
       </div>
       <div class="field">
         <label for="count">Count</label>
-        <input type="number" id="count" min="3" max="15" value="8">
+        <input type="number" id="count" min="3" max="25" value="8">
       </div>
       <div class="field">
         <label for="difficulty">Difficulty</label>
@@ -380,16 +570,68 @@
       <button class="nav-btn flip-btn" id="flipBtn">Flip</button>
       <button class="nav-btn" id="nextBtn">Next →</button>
     </div>
+
+    <div class="action-row">
+      <button class="download-btn" id="downloadBtn">⬇ Download (.txt)</button>
+      <button class="download-btn" id="shareBtn">🔗 Share link</button>
+      <button class="download-btn" id="shareImageBtn">📤 Share card</button>
+    </div>
+    <div class="share-result" id="shareResult" style="display:none;">
+      <input type="text" id="shareUrlInput" readonly>
+      <button type="button" id="copyShareBtn" class="copy-share-btn">Copy</button>
+    </div>
   </div>
 
-  <footer>Built with Mistral · <a href="#" id="resetLink">start a new deck</a></footer>
+  <footer>
+    <div class="footer-links">Built with Mistral · <a href="#" id="resetLink">start a new deck</a> · <a href="#" id="aboutLink">about &amp; privacy</a></div>
+    <div class="about-box">
+      <p><strong>Study Buddy</strong> by Leon Mapelera — a free tool that turns notes, articles, files, or photos into flashcards and quizzes using AI.</p>
+      <p class="about-fine">No sign-up, nothing stored. Public and rate-limited to keep it running for everyone — if it's briefly unavailable, it's probably just catching its breath.</p>
+    </div>
+  </footer>
+</div>
+
+<div id="aboutOverlay" class="read-overlay about-overlay">
+  <div class="read-overlay-header">
+    <span>About &amp; Privacy</span>
+    <button type="button" id="closeAboutBtn" class="read-close-btn">✕ Close</button>
+  </div>
+  <div class="about-content">
+    <h2>Study Buddy</h2>
+    <p class="about-tagline">Built by Leon Mapelera, from Zomba, Malawi.</p>
+
+    <h3>Why I built this</h3>
+    <p>I'm Leon Mapelera. I love building useful tools people can actually use — so I built Study Buddy to help people stop spending too long stuck studying the same topic. Paste in what you're learning, get a real deck back, and go. Work smart 🧠 not hard.</p>
+
+    <h3>What this is</h3>
+    <p>Study Buddy turns notes, articles, files, or photos into flashcards or quizzes, generated by AI (Mistral). Paste text, drop a URL, upload a PDF/DOCX/TXT, or snap a photo of a page — get a study deck back in seconds.</p>
+
+    <h3>How it works</h3>
+    <p>Your text (or extracted text from a file/photo/URL) is sent to Mistral's API to generate flashcards or quiz questions. Nothing is required from you to use it — no account, no email, no sign-up.</p>
+
+    <h3>Privacy policy</h3>
+    <p><strong>What's collected:</strong> Study Buddy itself does not create accounts, does not use cookies, and does not store your notes, uploaded files, photos, or generated decks on any server after your request finishes processing (shared decks are an exception — see below).</p>
+    <p><strong>Shared decks:</strong> if you use the "Share deck" feature, that specific deck's content is stored so the link can be opened by others. Nothing else about you is attached to it.</p>
+    <p><strong>Third-party processing:</strong> whatever text you submit (typed, pasted, or extracted from a file/photo/URL) is sent to Mistral AI's API in order to generate your deck. That request is subject to Mistral's own privacy practices as a data processor. Avoid pasting sensitive personal information you wouldn't want processed by a third-party AI service.</p>
+    <p><strong>Rate limiting:</strong> to keep the app free and available to everyone, requests are limited per visitor (currently 10 generations/minute, 60/hour). This is enforced by IP address temporarily in server memory, not linked to any identity, and not retained long-term.</p>
+    <p><strong>Hosting:</strong> this app runs on Render's infrastructure. Standard web server logs (e.g. IP address, request timing) may be retained briefly by the hosting provider for operational/security purposes, separate from anything Study Buddy itself does.</p>
+
+    <h3>Contact & source</h3>
+    <p><strong>Email:</strong> <a href="mailto:leoc39063@gmail.com">leoc39063@gmail.com</a></p>
+    <p><strong>Source code:</strong> <a href="https://github.com/COOLEO1/Studybuddy" target="_blank" rel="noopener">github.com/COOLEO1/Studybuddy</a></p>
+
+    <h3>Fine print</h3>
+    <p class="about-fine">Study Buddy is provided for free, as-is, with no guarantee of uptime or accuracy. AI-generated content can occasionally be wrong — always sanity-check facts that matter (like exam material) against a real source.</p>
+  </div>
 </div>
 
 <script>
+const SHARE_ID = {{ share_id | tojson }};
+
 // --- Splash screen ---
 (function(){
   const splash = document.getElementById('splash');
-  const MIN_DISPLAY_MS = 1400;
+  const MIN_DISPLAY_MS = 2400;
   const start = Date.now();
   function dismiss(){
     const elapsed = Date.now() - start;
@@ -485,7 +727,39 @@ document.getElementById('fetchUrlBtn').addEventListener('click', async ()=>{
   }
 });
 
+// --- Quickstart example chips ---
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelector('.tab-btn[data-tab="paste"]').click();
+    document.getElementById('studyText').value = chip.dataset.example;
+    document.getElementById('studyText').scrollIntoView({behavior:'smooth', block:'center'});
+  });
+});
+
 let mode = 'flashcards';
+
+// --- Fullscreen reading mode ---
+const readOverlay = document.getElementById('readOverlay');
+const readOverlayText = document.getElementById('readOverlayText');
+document.getElementById('fullscreenBtn').addEventListener('click', ()=>{
+  readOverlayText.value = document.getElementById('studyText').value;
+  readOverlay.classList.add('active');
+  readOverlayText.focus();
+});
+document.getElementById('closeReadBtn').addEventListener('click', ()=>{
+  document.getElementById('studyText').value = readOverlayText.value;
+  readOverlay.classList.remove('active');
+});
+
+// --- About & Privacy overlay ---
+const aboutOverlay = document.getElementById('aboutOverlay');
+document.getElementById('aboutLink').addEventListener('click', (e)=>{
+  e.preventDefault();
+  aboutOverlay.classList.add('active');
+});
+document.getElementById('closeAboutBtn').addEventListener('click', ()=>{
+  aboutOverlay.classList.remove('active');
+});
 let deck = [];
 let idx = 0;
 let flipped = false;
@@ -611,6 +885,159 @@ document.getElementById('prevBtn').addEventListener('click', ()=>{
 document.getElementById('nextBtn').addEventListener('click', ()=>{
   if(idx < deck.length - 1){ idx++; flipped = false; renderCard(); }
 });
+
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  if(!deck.length) return;
+  let text = `STUDY BUDDY — ${mode === 'flashcards' ? 'Flashcards' : 'Quiz'} Deck\n`;
+  text += `Generated by Recall · studybuddy\n`;
+  text += `${'='.repeat(50)}\n\n`;
+  deck.forEach((item, i)=>{
+    if(mode === 'flashcards'){
+      text += `Card ${i+1}\n`;
+      text += `Q: ${item.front}\n`;
+      text += `A: ${item.back}\n\n`;
+    } else {
+      text += `Question ${i+1}: ${item.question}\n`;
+      item.options.forEach((opt, oi)=>{
+        const marker = oi === item.correct_index ? '[correct]' : '';
+        text += `  ${String.fromCharCode(65+oi)}. ${opt} ${marker}\n`;
+      });
+      if(item.explanation) text += `  Explanation: ${item.explanation}\n`;
+      text += `\n`;
+    }
+  });
+  const blob = new Blob([text], {type: 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `study-buddy-${mode}-${Date.now()}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// --- Share deck via link ---
+const shareResult = document.getElementById('shareResult');
+const shareUrlInput = document.getElementById('shareUrlInput');
+const shareBtn = document.getElementById('shareBtn');
+
+shareBtn.addEventListener('click', async ()=>{
+  if(!deck.length) return;
+  shareBtn.disabled = true;
+  shareBtn.textContent = 'Sharing…';
+  try{
+    const resp = await fetch('/api/share', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ mode, deck })
+    });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Could not create share link.');
+    const url = `${window.location.origin}/deck/${data.id}`;
+    shareUrlInput.value = url;
+    shareResult.style.display = 'flex';
+    document.getElementById('copyShareBtn').classList.remove('copied');
+    document.getElementById('copyShareBtn').textContent = 'Copy';
+  }catch(err){
+    showExtractStatus(err.message, 'error');
+  }finally{
+    shareBtn.disabled = false;
+    shareBtn.textContent = '🔗 Share link';
+  }
+});
+
+document.getElementById('copyShareBtn').addEventListener('click', async ()=>{
+  try{
+    await navigator.clipboard.writeText(shareUrlInput.value);
+  }catch(e){
+    shareUrlInput.select();
+    document.execCommand('copy');
+  }
+  const btn = document.getElementById('copyShareBtn');
+  btn.textContent = 'Copied!';
+  btn.classList.add('copied');
+});
+
+// --- Share current card as a watermarked image (WhatsApp/Facebook/etc via native share sheet) ---
+document.getElementById('shareImageBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('shareImageBtn');
+  const cardEl = document.getElementById('cardEl');
+  if(typeof html2canvas === 'undefined'){
+    showExtractStatus('Image sharing failed to load — check your connection and try again.', 'error');
+    return;
+  }
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Preparing…';
+  try{
+    const canvas = await html2canvas(cardEl, {backgroundColor: '#FBF8F1', scale: 2});
+    const ctx = canvas.getContext('2d');
+
+    // Watermark bar at the bottom
+    const barHeight = Math.round(canvas.height * 0.07);
+    ctx.fillStyle = 'rgba(27,31,42,0.88)';
+    ctx.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
+    ctx.fillStyle = '#E8A33D';
+    ctx.font = `${Math.round(barHeight*0.42)}px monospace`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillText('Leo · Study Buddy', canvas.width/2, canvas.height - barHeight/2);
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const file = new File([blob], 'study-buddy-card.png', {type: 'image/png'});
+
+    if(navigator.canShare && navigator.canShare({files: [file]})){
+      await navigator.share({
+        files: [file],
+        title: 'Study Buddy',
+        text: 'Made with Study Buddy by Leon Mapelera'
+      });
+    } else {
+      // Fallback: download the image so it can be attached manually
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'study-buddy-card.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showExtractStatus('Image downloaded — attach it in WhatsApp or Facebook to share.', 'success');
+    }
+  }catch(err){
+    if(err.name !== 'AbortError'){
+      showExtractStatus('Could not create a shareable image on this device.', 'error');
+    }
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+});
+
+// --- Load a shared deck if this page was opened via /deck/<id> ---
+if(SHARE_ID){
+  (async ()=>{
+    try{
+      const resp = await fetch(`/api/share/${SHARE_ID}`);
+      const data = await resp.json();
+      if(!resp.ok) throw new Error(data.error || 'Could not load this shared deck.');
+      deck = data.deck;
+      mode = data.mode;
+      idx = 0;
+      flipped = false;
+      document.getElementById('deckModeLabel').textContent = mode === 'flashcards' ? 'Flashcards' : 'Quiz';
+      document.getElementById('flipBtn').style.display = mode === 'flashcards' ? 'inline-block' : 'none';
+      renderCard();
+      document.getElementById('results').style.display = 'block';
+      window.addEventListener('load', ()=>{
+        document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    }catch(err){
+      showExtractStatus(err.message, 'error');
+    }
+  })();
+}
 document.getElementById('resetLink').addEventListener('click', (e)=>{
   e.preventDefault();
   results.style.display = 'none';

@@ -2,6 +2,8 @@ import os
 import io
 import json
 import base64
+import sqlite3
+import secrets
 import requests
 from flask import Flask, request, jsonify, render_template
 from flask_limiter import Limiter
@@ -27,6 +29,34 @@ MODEL = "mistral-large-latest"
 
 # Hard cap on how much text a single request can send, to control token cost
 MAX_INPUT_CHARS = 12000
+
+# ---------------------------------------------------------------------------
+# Shared deck storage (SQLite)
+#
+# Note on Render's free tier: disk storage is ephemeral and can be wiped on
+# redeploys or when the service is rebuilt. Shared links will keep working
+# as long as the service instance stays up, but could reset after a redeploy.
+# For guaranteed-permanent links later, swap this for a hosted Postgres DB.
+# ---------------------------------------------------------------------------
+DB_PATH = os.environ.get("DB_PATH", "shared_decks.db")
+
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS shared_decks (
+            id TEXT PRIMARY KEY,
+            mode TEXT NOT NULL,
+            title TEXT,
+            data TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )"""
+    )
+    return conn
+
+
+def generate_share_id():
+    return secrets.token_urlsafe(6).replace("-", "").replace("_", "")[:8]
 
 
 # ---------------------------------------------------------------------------
@@ -139,7 +169,56 @@ def call_mistral(prompt):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", share_id=None)
+
+
+@app.route("/deck/<share_id>")
+def shared_deck(share_id):
+    return render_template("index.html", share_id=share_id)
+
+
+@app.route("/api/share", methods=["POST"])
+@limiter.limit("20 per minute")
+def create_share():
+    data = request.get_json(silent=True) or {}
+    mode = data.get("mode")
+    deck = data.get("deck")
+    title = (data.get("title") or "").strip()[:120]
+
+    if mode not in ("flashcards", "quiz") or not deck or not isinstance(deck, list):
+        return jsonify({"error": "Invalid deck data."}), 400
+    if len(deck) > 25:
+        return jsonify({"error": "Deck too large to share."}), 400
+
+    share_id = generate_share_id()
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO shared_decks (id, mode, title, data) VALUES (?, ?, ?, ?)",
+            (share_id, mode, title, json.dumps(deck)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return jsonify({"id": share_id})
+
+
+@app.route("/api/share/<share_id>", methods=["GET"])
+def get_share(share_id):
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT mode, title, data FROM shared_decks WHERE id = ?", (share_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return jsonify({"error": "This shared deck wasn't found — the link may be old or invalid."}), 404
+
+    mode, title, data = row
+    return jsonify({"mode": mode, "title": title, "deck": json.loads(data)})
 
 
 @app.route("/api/extract-file", methods=["POST"])
@@ -210,9 +289,11 @@ def generate():
     if mode not in ("flashcards", "quiz"):
         return jsonify({"error": "Invalid mode."}), 400
     try:
-        count = max(3, min(int(count), 15))
+        count = int(count)
     except (TypeError, ValueError):
         count = 8
+    if count < 3 or count > 25:
+        return jsonify({"error": "Card count must be between 3 and 25."}), 400
 
     prompt = build_prompt(mode, text, count, difficulty)
 
