@@ -193,6 +193,11 @@
   /* --- Tutor chat overlay --- */
   .tutor-overlay{ padding: 0; }
   .tutor-overlay .read-overlay-header{ padding: 16px 20px; margin-bottom: 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .tutor-header-title{ display:flex; align-items:center; gap: 10px; font-family:'Fraunces', serif; font-size: 16px; color: var(--text-light); text-transform: none; letter-spacing: normal; }
+  .tutor-badge{
+    width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--amber);
+    display:flex; align-items:center; justify-content:center; font-size: 15px; flex-shrink:0;
+  }
   .tutor-header-actions{ display:flex; gap: 8px; align-items:center; }
   .tutor-voice-toggle{
     padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.16);
@@ -201,27 +206,53 @@
   }
   .tutor-voice-toggle.active{ border-color: var(--amber); color: var(--amber); }
 
+  .tutor-subject-chips{
+    display:flex; gap: 8px; overflow-x:auto; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+  .subject-chip{
+    padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14);
+    background: var(--ink-2); color: var(--text-light); font-family:'IBM Plex Mono', monospace;
+    font-size: 12px; cursor:pointer; white-space:nowrap; transition: all .15s ease; flex-shrink:0;
+  }
+  .subject-chip:hover, .subject-chip.active{ border-color: var(--amber); color: var(--amber); background: rgba(232,163,61,0.08); }
+
   .tutor-chat{
     flex:1; overflow-y:auto; padding: 20px; display:flex; flex-direction:column; gap: 14px;
     max-width: 640px; margin: 0 auto; width:100%;
   }
   .tutor-msg{
-    padding: 12px 16px; border-radius: 10px; font-size: 14px; line-height: 1.6;
-    max-width: 85%; white-space: pre-wrap;
+    padding: 13px 17px; border-radius: 14px; font-size: 14px; line-height: 1.65;
+    max-width: 85%; animation: msgIn 0.25s ease;
+  }
+  @keyframes msgIn{
+    from{ opacity: 0; transform: translateY(6px); }
+    to{ opacity: 1; transform: translateY(0); }
   }
   .tutor-msg-bot{
     background: var(--paper); color: var(--text-dark); align-self: flex-start;
-    border-top-left-radius: 2px;
+    border-bottom-left-radius: 3px;
   }
   .tutor-msg-user{
     background: var(--teal); color: var(--text-light); align-self: flex-end;
-    border-top-right-radius: 2px;
+    border-bottom-right-radius: 3px; white-space: pre-wrap;
   }
-  .tutor-msg-typing{ opacity: 0.6; font-style: italic; }
+  .tutor-msg-bot strong{ color: var(--ink); }
+  .tutor-msg-typing{ display:flex; gap: 4px; align-items:center; padding: 16px 17px; }
+  .tutor-msg-typing span{
+    width: 6px; height: 6px; border-radius: 50%; background: var(--teal);
+    animation: typingDot 1.1s ease-in-out infinite;
+  }
+  .tutor-msg-typing span:nth-child(2){ animation-delay: 0.15s; }
+  .tutor-msg-typing span:nth-child(3){ animation-delay: 0.3s; }
+  @keyframes typingDot{
+    0%, 60%, 100%{ opacity: 0.3; transform: translateY(0); }
+    30%{ opacity: 1; transform: translateY(-3px); }
+  }
 
   .tutor-input-row{
     display:flex; gap: 8px; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.08);
-    max-width: 640px; margin: 0 auto; width:100%; box-sizing: border-box;
+    max-width: 640px; margin: 0 auto; width:100%; box-sizing: border-box; align-items:flex-end;
   }
   .tutor-input{
     flex:1; resize:none; background: var(--ink); color: var(--text-light);
@@ -236,6 +267,13 @@
   .tutor-mic-btn.recording{ background: #b8493e; color: #fff; }
   .tutor-send-btn{ background: var(--amber); color: var(--ink); font-weight:600; }
   .tutor-send-btn:disabled{ opacity: 0.5; cursor:not-allowed; }
+
+  @media (max-width: 480px){
+    .tutor-subject-chips{ padding: 10px 14px; }
+    .tutor-chat{ padding: 14px; }
+    .tutor-input-row{ padding: 10px 14px; }
+    .tutor-msg{ max-width: 92%; font-size: 13px; }
+  }
 
   .about-facts{
     list-style: none; margin: 0 0 28px; padding: 16px 18px; border-radius: 8px;
@@ -575,7 +613,7 @@
   </header>
 
   <button type="button" class="tutor-entry-btn" id="tutorEntryBtn">
-    🎓 Try Maths Tutor Mode — learn step by step, not just review
+    🎓 Try Tutor Mode — learn any subject step by step, not just review
   </button>
 
   <section class="how-it-works">
@@ -773,18 +811,31 @@
 
 <div id="tutorOverlay" class="read-overlay tutor-overlay">
   <div class="read-overlay-header">
-    <span>🎓 Maths Tutor</span>
+    <div class="tutor-header-title">
+      <span class="tutor-badge">🎓</span>
+      <span>Tutor</span>
+    </div>
     <div class="tutor-header-actions">
       <button type="button" id="tutorVoiceToggle" class="tutor-voice-toggle" title="Toggle spoken replies">🔊 Voice off</button>
       <button type="button" id="closeTutorBtn" class="read-close-btn">✕ Close</button>
     </div>
   </div>
+  <div class="tutor-subject-chips" id="tutorSubjectChips">
+    <button type="button" class="subject-chip" data-subject="Maths">📐 Maths</button>
+    <button type="button" class="subject-chip" data-subject="Physics">⚛️ Physics</button>
+    <button type="button" class="subject-chip" data-subject="Biology">🧬 Biology</button>
+    <button type="button" class="subject-chip" data-subject="Chemistry">🧪 Chemistry</button>
+    <button type="button" class="subject-chip" data-subject="English">📖 English</button>
+    <button type="button" class="subject-chip" data-subject="Geography">🌍 Geography</button>
+  </div>
   <div class="tutor-chat" id="tutorChat">
     <div class="tutor-msg tutor-msg-bot">
-      Hi! I'm your Maths tutor. Tell me a topic you want help with — like "quadratic equations" or "circle theorems" — or paste a problem you're stuck on. I'll explain it step by step and give you practice as we go.
+      Hi! I'm your tutor — I can help with any subject: Maths, Physics, Biology, English, whatever you're working on. Pick a subject above, tell me a topic, or paste/photograph a problem you're stuck on. I'll explain it step by step and give you practice as we go.
     </div>
   </div>
   <div class="tutor-input-row">
+    <button type="button" id="tutorCameraBtn" class="tutor-mic-btn" title="Show me your work (photo)">📷</button>
+    <input type="file" id="tutorCameraInput" accept="image/*" capture="environment" hidden>
     <button type="button" id="tutorMicBtn" class="tutor-mic-btn" title="Speak your message">🎤</button>
     <textarea id="tutorInput" class="tutor-input" placeholder="Ask about a topic, or answer the last question…" rows="1"></textarea>
     <button type="button" id="tutorSendBtn" class="tutor-send-btn">Send</button>
@@ -956,13 +1007,44 @@ tutorVoiceToggle.addEventListener('click', ()=>{
   tutorVoiceToggle.textContent = tutorVoiceOn ? '🔊 Voice on' : '🔊 Voice off';
 });
 
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderLightMarkdown(text){
+  // Safety net in case the model still slips in markdown despite instructions.
+  // Escapes HTML first (so the model's own text can't inject markup), then
+  // converts a few common markdown patterns into real formatting.
+  let html = escapeHtml(text);
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+  html = html.replace(/^#{1,6}\s*(.+)$/gm, '<strong>$1</strong>');
+  html = html.replace(/^[-•]\s+(.+)$/gm, '— $1');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
 function addTutorMessage(role, text){
   const div = document.createElement('div');
   div.className = 'tutor-msg ' + (role === 'user' ? 'tutor-msg-user' : 'tutor-msg-bot');
-  div.textContent = text;
+  if(role === 'user'){
+    div.textContent = text;
+  } else {
+    div.innerHTML = renderLightMarkdown(text);
+  }
   tutorChat.appendChild(div);
   tutorChat.scrollTop = tutorChat.scrollHeight;
   return div;
+}
+
+function stripMarkdownForSpeech(text){
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/^[-•]\s+/gm, '');
 }
 
 async function speakTutorReply(text){
@@ -970,7 +1052,7 @@ async function speakTutorReply(text){
     const resp = await fetch('/api/voice/speak', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({text})
+      body: JSON.stringify({text: stripMarkdownForSpeech(text)})
     });
     if(!resp.ok) return; // fail silently, text reply is already shown
     const blob = await resp.blob();
@@ -985,10 +1067,14 @@ async function sendTutorMessage(text){
   addTutorMessage('user', text);
   tutorHistory.push({role: 'user', content: text});
   tutorInput.value = '';
+  tutorInput.style.height = 'auto';
   tutorSendBtn.disabled = true;
 
-  const typingEl = addTutorMessage('bot', 'Thinking…');
-  typingEl.classList.add('tutor-msg-typing');
+  const typingEl = document.createElement('div');
+  typingEl.className = 'tutor-msg tutor-msg-bot tutor-msg-typing';
+  typingEl.innerHTML = '<span></span><span></span><span></span>';
+  tutorChat.appendChild(typingEl);
+  tutorChat.scrollTop = tutorChat.scrollHeight;
 
   try{
     const resp = await fetch('/api/tutor', {
@@ -1020,6 +1106,65 @@ tutorInput.addEventListener('keydown', (e)=>{
 tutorInput.addEventListener('input', ()=>{
   tutorInput.style.height = 'auto';
   tutorInput.style.height = Math.min(tutorInput.scrollHeight, 100) + 'px';
+});
+
+// --- Subject quick-select chips ---
+document.querySelectorAll('.subject-chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.subject-chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    const subject = chip.dataset.subject;
+    tutorInput.value = `I want to learn ${subject}. `;
+    tutorInput.focus();
+    tutorInput.setSelectionRange(tutorInput.value.length, tutorInput.value.length);
+  });
+});
+
+// --- Camera: photograph notebook work, AI reads and reasons about it ---
+const tutorCameraBtn = document.getElementById('tutorCameraBtn');
+const tutorCameraInput = document.getElementById('tutorCameraInput');
+tutorCameraBtn.addEventListener('click', ()=> tutorCameraInput.click());
+tutorCameraInput.addEventListener('change', async ()=>{
+  const file = tutorCameraInput.files[0];
+  if(!file) return;
+  tutorCameraBtn.disabled = true;
+  tutorCameraBtn.textContent = '…';
+  addTutorMessage('user', '📷 [Photo of my work]');
+
+  const typingEl = document.createElement('div');
+  typingEl.className = 'tutor-msg tutor-msg-bot tutor-msg-typing';
+  typingEl.innerHTML = '<span></span><span></span><span></span>';
+  tutorChat.appendChild(typingEl);
+  tutorChat.scrollTop = tutorChat.scrollHeight;
+
+  try{
+    const formData = new FormData();
+    formData.append('file', file);
+    const extractResp = await fetch('/api/extract-file', {method: 'POST', body: formData});
+    const extractData = await extractResp.json();
+    if(!extractResp.ok) throw new Error(extractData.error || "Couldn't read that photo.");
+
+    const message = `Here's a photo of my work. Here's what's in it: ${extractData.text}\n\nCan you check it and help me with it?`;
+    const resp = await fetch('/api/tutor', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({history: tutorHistory, message})
+    });
+    const data = await resp.json();
+    typingEl.remove();
+    if(!resp.ok) throw new Error(data.error || 'Something went wrong.');
+    tutorHistory.push({role: 'user', content: message});
+    addTutorMessage('bot', data.reply);
+    tutorHistory.push({role: 'assistant', content: data.reply});
+    if(tutorVoiceOn) speakTutorReply(data.reply);
+  }catch(err){
+    typingEl.remove();
+    addTutorMessage('bot', `⚠ ${err.message}`);
+  }finally{
+    tutorCameraBtn.disabled = false;
+    tutorCameraBtn.textContent = '📷';
+    tutorCameraInput.value = '';
+  }
 });
 
 // --- Voice input (mic button) ---
