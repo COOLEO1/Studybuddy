@@ -28,6 +28,15 @@ MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 API_URL = "https://api.mistral.ai/v1/chat/completions"
 MODEL = "mistral-large-latest"
 
+# NOTE: Voxtral (voice) endpoint paths below are based on Mistral's published
+# audio API structure as of writing. Mistral's audio API is newer than the
+# chat API and could change — if these calls start failing, check
+# https://docs.mistral.ai/studio/audio/overview for the current paths/params.
+AUDIO_TRANSCRIBE_URL = "https://api.mistral.ai/v1/audio/transcriptions"
+AUDIO_SPEECH_URL = "https://api.mistral.ai/v1/audio/speech"
+TRANSCRIBE_MODEL = "voxtral-mini-transcribe-2507"
+TTS_MODEL = "voxtral-mini-tts-2603"
+
 # Per-call chunk size (safe single-request size) and total ceiling across chunks.
 CHUNK_SIZE = 12000
 MAX_TOTAL_CHARS = 60000  # ~5 chunks worth — enough for a full play/long chapter
@@ -102,7 +111,9 @@ def extract_from_docx(file_stream):
 
 
 def extract_from_image(file_bytes, mime_type):
-    """Use Mistral's vision model to read text out of a photo/image."""
+    """Use Mistral's vision model to read text AND describe diagrams/figures
+    in a photo — important for subjects like Maths where the diagram often
+    carries the actual content (angles, shapes, graphs), not just the words."""
     b64 = base64.b64encode(file_bytes).decode("utf-8")
     headers = {
         "Authorization": f"Bearer {MISTRAL_API_KEY}",
@@ -117,8 +128,15 @@ def extract_from_image(file_bytes, mime_type):
                     {
                         "type": "text",
                         "text": (
-                            "Transcribe all readable text in this image exactly as written. "
-                            "Output only the transcribed text, no commentary, no markdown."
+                            "This image may contain text, and/or diagrams, figures, graphs, "
+                            "or geometric shapes (common in Maths and Science material). Do both:\n"
+                            "1. Transcribe all readable text exactly as written.\n"
+                            "2. For any diagram, figure, graph, or shape, describe it precisely in "
+                            "words immediately after the related text — include labeled points, "
+                            "angles, measurements, axis values, shape type, and how parts relate "
+                            "(e.g. 'Triangle ABC with angle B = 40°, angle C = 90°, side AB = 5cm'). "
+                            "If it's a graph, describe the curve/line shape and key points.\n"
+                            "Output only the transcription and descriptions, no extra commentary, no markdown."
                         ),
                     },
                     {
@@ -293,6 +311,122 @@ def extract_url():
         return jsonify({"error": "Couldn't extract readable article text from that page."}), 400
 
     return jsonify({"text": text[:MAX_TOTAL_CHARS]})
+
+
+TUTOR_SYSTEM_PROMPT = (
+    "You are a patient, encouraging Maths tutor helping a student preparing for their "
+    "MSCE (Malawi School Certificate of Education) exam. Teach the way a great human "
+    "tutor would:\n"
+    "- Explain concepts step by step, in plain language, building from what the student "
+    "already seems to know.\n"
+    "- After explaining a concept, give the student ONE practice problem to try, then wait "
+    "for their answer before continuing.\n"
+    "- When they answer, check their WORKING, not just the final number — MSCE marks method, "
+    "not just the answer. Point out exactly where a mistake happened if there is one, and "
+    "explain the fix. If they're correct, briefly confirm why it's correct before moving on.\n"
+    "- If they seem to be struggling with the same idea repeatedly, slow down and re-explain "
+    "it a different way rather than pushing forward.\n"
+    "- If a diagram was described to you (e.g. from a photo), reason about it using the "
+    "description given.\n"
+    "- Keep responses focused and not overly long — this is a back-and-forth conversation, "
+    "not a lecture. Use simple formatting (no heavy markdown) since this may be read aloud."
+)
+
+
+@app.route("/api/tutor", methods=["POST"])
+@limiter.limit("20 per minute")
+def tutor():
+    if not MISTRAL_API_KEY:
+        return jsonify({"error": "Server misconfigured: no API key set."}), 500
+
+    data = request.get_json(silent=True) or {}
+    history = data.get("history", [])
+    message = (data.get("message") or "").strip()
+
+    if not message:
+        return jsonify({"error": "Please type or say something first."}), 400
+    if len(message) > 4000:
+        return jsonify({"error": "That message is too long."}), 400
+    if not isinstance(history, list) or len(history) > 60:
+        return jsonify({"error": "Conversation too long — please start a new tutor session."}), 400
+
+    messages = [{"role": "system", "content": TUTOR_SYSTEM_PROMPT}]
+    for turn in history[-40:]:
+        role = turn.get("role")
+        content = turn.get("content")
+        if role in ("user", "assistant") and isinstance(content, str):
+            messages.append({"role": role, "content": content[:4000]})
+    messages.append({"role": "user", "content": message})
+
+    headers = {
+        "Authorization": f"Bearer {MISTRAL_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {"model": MODEL, "messages": messages, "temperature": 0.6}
+
+    try:
+        resp = requests.post(API_URL, headers=headers, json=payload, timeout=45)
+        resp.raise_for_status()
+        reply = resp.json()["choices"][0]["message"]["content"]
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Upstream API error: {e}"}), 502
+    except (KeyError, IndexError):
+        return jsonify({"error": "The tutor didn't respond properly. Try again."}), 502
+
+    return jsonify({"reply": reply})
+
+
+@app.route("/api/voice/transcribe", methods=["POST"])
+@limiter.limit("20 per minute")
+def voice_transcribe():
+    if not MISTRAL_API_KEY:
+        return jsonify({"error": "Server misconfigured: no API key set."}), 500
+    if "audio" not in request.files:
+        return jsonify({"error": "No audio was uploaded."}), 400
+
+    audio_file = request.files["audio"]
+    headers = {"Authorization": f"Bearer {MISTRAL_API_KEY}"}
+    files = {"file": (audio_file.filename or "audio.webm", audio_file.stream, audio_file.mimetype)}
+    data = {"model": TRANSCRIBE_MODEL}
+
+    try:
+        resp = requests.post(AUDIO_TRANSCRIBE_URL, headers=headers, files=files, data=data, timeout=45)
+        resp.raise_for_status()
+        result = resp.json()
+        text = result.get("text", "")
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Voice transcription failed: {e}"}), 502
+    except (KeyError, ValueError):
+        return jsonify({"error": "Couldn't understand the audio. Try again or type instead."}), 502
+
+    return jsonify({"text": text})
+
+
+@app.route("/api/voice/speak", methods=["POST"])
+@limiter.limit("20 per minute")
+def voice_speak():
+    if not MISTRAL_API_KEY:
+        return jsonify({"error": "Server misconfigured: no API key set."}), 500
+
+    data = request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()
+    if not text:
+        return jsonify({"error": "No text to speak."}), 400
+    text = text[:2000]  # keep TTS cost bounded per call
+
+    headers = {
+        "Authorization": f"Bearer {MISTRAL_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {"model": TTS_MODEL, "input": text, "voice": "default"}
+
+    try:
+        resp = requests.post(AUDIO_SPEECH_URL, headers=headers, json=payload, timeout=45)
+        resp.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Voice generation failed: {e}"}), 502
+
+    return resp.content, 200, {"Content-Type": "audio/mpeg"}
 
 
 @app.route("/api/generate", methods=["POST"])

@@ -181,6 +181,62 @@
   .about-content a:hover{ text-decoration: underline; }
   .about-content .about-fine{ font-size: 12px; opacity: 0.8; }
 
+  /* --- Tutor mode entry button --- */
+  .tutor-entry-btn{
+    width:100%; margin-bottom: 28px; padding: 16px; border-radius: 8px;
+    border: 1px solid var(--teal); background: rgba(76,122,110,0.12); color: var(--text-light);
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight:600; cursor:pointer;
+    transition: all .15s ease;
+  }
+  .tutor-entry-btn:hover{ background: rgba(76,122,110,0.22); }
+
+  /* --- Tutor chat overlay --- */
+  .tutor-overlay{ padding: 0; }
+  .tutor-overlay .read-overlay-header{ padding: 16px 20px; margin-bottom: 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .tutor-header-actions{ display:flex; gap: 8px; align-items:center; }
+  .tutor-voice-toggle{
+    padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.16);
+    background: var(--ink-2); color: var(--text-muted); font-family:'IBM Plex Mono', monospace;
+    font-size: 11px; cursor:pointer;
+  }
+  .tutor-voice-toggle.active{ border-color: var(--amber); color: var(--amber); }
+
+  .tutor-chat{
+    flex:1; overflow-y:auto; padding: 20px; display:flex; flex-direction:column; gap: 14px;
+    max-width: 640px; margin: 0 auto; width:100%;
+  }
+  .tutor-msg{
+    padding: 12px 16px; border-radius: 10px; font-size: 14px; line-height: 1.6;
+    max-width: 85%; white-space: pre-wrap;
+  }
+  .tutor-msg-bot{
+    background: var(--paper); color: var(--text-dark); align-self: flex-start;
+    border-top-left-radius: 2px;
+  }
+  .tutor-msg-user{
+    background: var(--teal); color: var(--text-light); align-self: flex-end;
+    border-top-right-radius: 2px;
+  }
+  .tutor-msg-typing{ opacity: 0.6; font-style: italic; }
+
+  .tutor-input-row{
+    display:flex; gap: 8px; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.08);
+    max-width: 640px; margin: 0 auto; width:100%; box-sizing: border-box;
+  }
+  .tutor-input{
+    flex:1; resize:none; background: var(--ink); color: var(--text-light);
+    border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; padding: 10px 12px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height:1.5; max-height: 100px;
+  }
+  .tutor-mic-btn, .tutor-send-btn{
+    padding: 10px 14px; border-radius: 8px; border: none; cursor:pointer;
+    font-family:'IBM Plex Mono', monospace; font-size: 13px; flex-shrink:0;
+  }
+  .tutor-mic-btn{ background: var(--ink-2); color: var(--text-light); border: 1px solid rgba(255,255,255,0.14); }
+  .tutor-mic-btn.recording{ background: #b8493e; color: #fff; }
+  .tutor-send-btn{ background: var(--amber); color: var(--ink); font-weight:600; }
+  .tutor-send-btn:disabled{ opacity: 0.5; cursor:not-allowed; }
+
   .about-facts{
     list-style: none; margin: 0 0 28px; padding: 16px 18px; border-radius: 8px;
     background: var(--ink-2); border: 1px solid rgba(255,255,255,0.08);
@@ -518,6 +574,10 @@
     </div>
   </header>
 
+  <button type="button" class="tutor-entry-btn" id="tutorEntryBtn">
+    🎓 Try Maths Tutor Mode — learn step by step, not just review
+  </button>
+
   <section class="how-it-works">
     <div class="hiw-step">
       <span class="hiw-num">01</span>
@@ -711,6 +771,26 @@
   </div>
 </div>
 
+<div id="tutorOverlay" class="read-overlay tutor-overlay">
+  <div class="read-overlay-header">
+    <span>🎓 Maths Tutor</span>
+    <div class="tutor-header-actions">
+      <button type="button" id="tutorVoiceToggle" class="tutor-voice-toggle" title="Toggle spoken replies">🔊 Voice off</button>
+      <button type="button" id="closeTutorBtn" class="read-close-btn">✕ Close</button>
+    </div>
+  </div>
+  <div class="tutor-chat" id="tutorChat">
+    <div class="tutor-msg tutor-msg-bot">
+      Hi! I'm your Maths tutor. Tell me a topic you want help with — like "quadratic equations" or "circle theorems" — or paste a problem you're stuck on. I'll explain it step by step and give you practice as we go.
+    </div>
+  </div>
+  <div class="tutor-input-row">
+    <button type="button" id="tutorMicBtn" class="tutor-mic-btn" title="Speak your message">🎤</button>
+    <textarea id="tutorInput" class="tutor-input" placeholder="Ask about a topic, or answer the last question…" rows="1"></textarea>
+    <button type="button" id="tutorSendBtn" class="tutor-send-btn">Send</button>
+  </div>
+</div>
+
 <script>
 const SHARE_ID = {{ share_id | tojson }};
 
@@ -846,6 +926,139 @@ document.getElementById('aboutLink').addEventListener('click', (e)=>{
 });
 document.getElementById('closeAboutBtn').addEventListener('click', ()=>{
   aboutOverlay.classList.remove('active');
+});
+
+// --- Tutor Mode ---
+const tutorOverlay = document.getElementById('tutorOverlay');
+const tutorChat = document.getElementById('tutorChat');
+const tutorInput = document.getElementById('tutorInput');
+const tutorSendBtn = document.getElementById('tutorSendBtn');
+const tutorMicBtn = document.getElementById('tutorMicBtn');
+const tutorVoiceToggle = document.getElementById('tutorVoiceToggle');
+
+let tutorHistory = [];
+let tutorVoiceOn = false;
+let tutorMediaRecorder = null;
+let tutorAudioChunks = [];
+
+document.getElementById('tutorEntryBtn').addEventListener('click', ()=>{
+  tutorOverlay.classList.add('active');
+  tutorInput.focus();
+});
+document.getElementById('closeTutorBtn').addEventListener('click', ()=>{
+  tutorOverlay.classList.remove('active');
+  if(tutorMediaRecorder && tutorMediaRecorder.state === 'recording') tutorMediaRecorder.stop();
+});
+
+tutorVoiceToggle.addEventListener('click', ()=>{
+  tutorVoiceOn = !tutorVoiceOn;
+  tutorVoiceToggle.classList.toggle('active', tutorVoiceOn);
+  tutorVoiceToggle.textContent = tutorVoiceOn ? '🔊 Voice on' : '🔊 Voice off';
+});
+
+function addTutorMessage(role, text){
+  const div = document.createElement('div');
+  div.className = 'tutor-msg ' + (role === 'user' ? 'tutor-msg-user' : 'tutor-msg-bot');
+  div.textContent = text;
+  tutorChat.appendChild(div);
+  tutorChat.scrollTop = tutorChat.scrollHeight;
+  return div;
+}
+
+async function speakTutorReply(text){
+  try{
+    const resp = await fetch('/api/voice/speak', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text})
+    });
+    if(!resp.ok) return; // fail silently, text reply is already shown
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.play().catch(()=>{});
+  }catch(e){ /* voice is a bonus, never block the chat on it */ }
+}
+
+async function sendTutorMessage(text){
+  if(!text.trim()) return;
+  addTutorMessage('user', text);
+  tutorHistory.push({role: 'user', content: text});
+  tutorInput.value = '';
+  tutorSendBtn.disabled = true;
+
+  const typingEl = addTutorMessage('bot', 'Thinking…');
+  typingEl.classList.add('tutor-msg-typing');
+
+  try{
+    const resp = await fetch('/api/tutor', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({history: tutorHistory.slice(0, -1), message: text})
+    });
+    const data = await resp.json();
+    typingEl.remove();
+    if(!resp.ok) throw new Error(data.error || 'Something went wrong.');
+    addTutorMessage('bot', data.reply);
+    tutorHistory.push({role: 'assistant', content: data.reply});
+    if(tutorVoiceOn) speakTutorReply(data.reply);
+  }catch(err){
+    typingEl.remove();
+    addTutorMessage('bot', `⚠ ${err.message}`);
+  }finally{
+    tutorSendBtn.disabled = false;
+  }
+}
+
+tutorSendBtn.addEventListener('click', ()=> sendTutorMessage(tutorInput.value));
+tutorInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    sendTutorMessage(tutorInput.value);
+  }
+});
+tutorInput.addEventListener('input', ()=>{
+  tutorInput.style.height = 'auto';
+  tutorInput.style.height = Math.min(tutorInput.scrollHeight, 100) + 'px';
+});
+
+// --- Voice input (mic button) ---
+tutorMicBtn.addEventListener('click', async ()=>{
+  if(tutorMediaRecorder && tutorMediaRecorder.state === 'recording'){
+    tutorMediaRecorder.stop();
+    return;
+  }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    tutorAudioChunks = [];
+    tutorMediaRecorder = new MediaRecorder(stream);
+    tutorMediaRecorder.ondataavailable = e => tutorAudioChunks.push(e.data);
+    tutorMediaRecorder.onstop = async ()=>{
+      stream.getTracks().forEach(t => t.stop());
+      tutorMicBtn.classList.remove('recording');
+      const blob = new Blob(tutorAudioChunks, {type: 'audio/webm'});
+      const formData = new FormData();
+      formData.append('audio', blob, 'voice.webm');
+      tutorMicBtn.textContent = '…';
+      try{
+        const resp = await fetch('/api/voice/transcribe', {method: 'POST', body: formData});
+        const data = await resp.json();
+        if(resp.ok && data.text){
+          tutorInput.value = data.text;
+        } else {
+          addTutorMessage('bot', `⚠ ${data.error || "Couldn't understand that — try typing instead."}`);
+        }
+      }catch(e){
+        addTutorMessage('bot', '⚠ Voice input failed — try typing instead.');
+      }
+      tutorMicBtn.textContent = '🎤';
+    };
+    tutorMediaRecorder.start();
+    tutorMicBtn.classList.add('recording');
+    tutorMicBtn.textContent = '⏹';
+  }catch(e){
+    addTutorMessage('bot', '⚠ Microphone access denied or unavailable.');
+  }
 });
 
 let deck = [];
