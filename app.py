@@ -177,6 +177,25 @@ def build_prompt(mode, text, count, difficulty):
             f'{{"cards": [{{"front": "question or term", "back": "answer or definition"}}]}}\n\n'
             f"STUDY MATERIAL:\n{text}"
         )
+    elif mode == "pastpaper":
+        return (
+            f"You are an expert exam-question writer, specifically experienced with MSCE "
+            f"(Malawi School Certificate of Education) style exams. Below is a real past exam "
+            f"paper or excerpt from one. Study its SUBJECT, question STYLE, phrasing conventions, "
+            f"topic coverage, and difficulty level carefully.\n\n"
+            f"Generate {count} NEW multiple-choice practice questions that closely match this "
+            f"paper's style, subject, and difficulty at a {difficulty} level — testing the SAME "
+            f"topics and skills the original paper tests, but with different specific questions "
+            f"than what's literally written in the source, so the student gets fresh practice "
+            f"rather than just seeing the same questions again. Match the exam board's typical "
+            f"phrasing and question structure as closely as possible.\n"
+            f"Each question must have exactly 4 options with exactly one correct answer, plus a "
+            f"brief explanation of why that answer is correct.\n"
+            f"Return ONLY valid JSON, no markdown fences, no commentary, in this exact shape:\n"
+            f'{{"questions": [{{"question": "...", "options": ["A","B","C","D"], '
+            f'"correct_index": 0, "explanation": "brief reason"}}]}}\n\n'
+            f"PAST EXAM PAPER:\n{text}"
+        )
     else:  # quiz
         return (
             f"You are an expert tutor. Read the study material below and generate "
@@ -228,7 +247,7 @@ def create_share():
     deck = data.get("deck")
     title = (data.get("title") or "").strip()[:120]
 
-    if mode not in ("flashcards", "quiz") or not deck or not isinstance(deck, list):
+    if mode not in ("flashcards", "quiz", "pastpaper") or not deck or not isinstance(deck, list):
         return jsonify({"error": "Invalid deck data."}), 400
     if len(deck) > 25:
         return jsonify({"error": "Deck too large to share."}), 400
@@ -453,7 +472,7 @@ def generate():
         return jsonify({"error": "Please paste some study material first."}), 400
     if len(text) > MAX_TOTAL_CHARS:
         return jsonify({"error": f"Text is too long (max {MAX_TOTAL_CHARS:,} characters)."}), 400
-    if mode not in ("flashcards", "quiz"):
+    if mode not in ("flashcards", "quiz", "pastpaper"):
         return jsonify({"error": "Invalid mode."}), 400
     try:
         count = int(count)
