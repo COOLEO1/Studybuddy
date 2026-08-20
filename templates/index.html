@@ -389,6 +389,43 @@
     font-size: 11px; color: var(--text-muted); margin-top: 8px; line-height: 1.5;
     border-left: 2px solid var(--teal); padding-left: 10px;
   }
+  .paper-library-actions{ margin-top: 10px; display:flex; flex-direction:column; gap: 8px; }
+  .library-btn{
+    align-self:flex-start; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--teal);
+    background: rgba(76,122,110,0.1); color: var(--text-light); font-family:'IBM Plex Mono', monospace;
+    font-size: 12px; cursor:pointer;
+  }
+  .library-btn:hover{ background: rgba(76,122,110,0.2); }
+  .library-save-check{
+    display:flex; align-items:center; gap: 8px; font-size: 11px; color: var(--text-muted); cursor:pointer;
+  }
+  .library-meta-fields{ display:flex; flex-direction:column; gap: 6px; margin-left: 22px; }
+  .library-meta-fields input{
+    padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
+    background: var(--ink); color: var(--text-light); font-family:'IBM Plex Mono', monospace; font-size: 12px;
+  }
+
+  /* --- Papers library overlay --- */
+  .library-overlay{ padding: 0; }
+  .library-overlay .read-overlay-header{ padding: 16px 20px; margin-bottom: 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .library-filter-row{ padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .library-filter-row input{
+    width:100%; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
+    background: var(--ink); color: var(--text-light); font-family:'IBM Plex Mono', monospace; font-size: 13px;
+  }
+  .library-list{ flex:1; overflow-y:auto; padding: 14px 20px; max-width: 640px; margin: 0 auto; width:100%; }
+  .library-empty{ font-size: 13px; color: var(--text-muted); text-align:center; padding: 30px 0; }
+  .library-item{
+    background: var(--paper); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px;
+    cursor:pointer; transition: transform .1s ease;
+  }
+  .library-item:hover{ transform: translateY(-1px); }
+  .library-item-title{ font-family:'Fraunces', serif; font-size: 15px; color: var(--text-dark); margin-bottom: 4px; }
+  .library-item-meta{ font-size: 11px; color: #6b6553; font-family:'IBM Plex Mono', monospace; }
+  .library-note{
+    font-size: 11px; color: var(--text-muted); padding: 12px 20px; text-align:center;
+    border-top: 1px solid rgba(255,255,255,0.06); margin: 0;
+  }
 
   .generate-btn{
     margin-top: 24px; width:100%; padding: 15px; border:none; border-radius: 7px;
@@ -541,6 +578,11 @@
   .chip:hover{ border-color: var(--amber); color: var(--amber); }
 
   .deck-history-bar{ margin-bottom: 24px; }
+  .offline-banner{
+    margin-bottom: 20px; padding: 12px 16px; border-radius: 8px;
+    background: rgba(232,163,61,0.1); border: 1px solid rgba(232,163,61,0.3);
+    color: var(--amber); font-size: 13px; line-height: 1.5;
+  }
   .deck-history-chips{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
   .history-chip{
     display:flex; align-items:center; gap: 6px; padding: 7px 12px; border-radius: 999px;
@@ -644,8 +686,12 @@
     <button type="button" class="chip" data-example="Photosynthesis is the process by which plants, algae, and some bacteria convert light energy into chemical energy, producing glucose and oxygen from carbon dioxide and water.">Photosynthesis</button>
   </div>
 
+  <div class="offline-banner" id="offlineBanner" style="display:none;">
+    📡 You're offline — you can still review saved decks below, but generating new ones needs a connection.
+  </div>
+
   <div class="deck-history-bar" id="deckHistoryBar" style="display:none;">
-    <span class="quickstart-label">Your decks this session —</span>
+    <span class="quickstart-label">Your decks — saved on this device —</span>
     <div class="deck-history-chips" id="deckHistoryChips"></div>
   </div>
 
@@ -696,6 +742,18 @@
           <button type="button" class="mode-btn" data-mode="pastpaper">Past Paper</button>
         </div>
         <p class="mode-hint" id="modeHint" style="display:none;">Paste or upload a real past exam paper — you'll get fresh practice questions in the same style, not the exact same questions.</p>
+        <div class="paper-library-actions" id="paperLibraryActions" style="display:none;">
+          <button type="button" class="library-btn" id="browseLibraryBtn">📚 Browse papers library</button>
+          <label class="library-save-check">
+            <input type="checkbox" id="saveToLibraryCheck">
+            Save this paper to the shared library for others too
+          </label>
+          <div class="library-meta-fields" id="libraryMetaFields" style="display:none;">
+            <input type="text" id="paperSubject" placeholder="Subject (required, e.g. Maths)">
+            <input type="text" id="paperYear" placeholder="Year (optional, e.g. 2023)">
+            <input type="text" id="paperSchool" placeholder="School/board (optional)">
+          </div>
+        </div>
       </div>
       <div class="field">
         <label for="count">Count</label>
@@ -815,6 +873,20 @@
   </div>
 </div>
 
+<div id="libraryOverlay" class="read-overlay library-overlay">
+  <div class="read-overlay-header">
+    <span>📚 Past Papers Library</span>
+    <button type="button" id="closeLibraryBtn" class="read-close-btn">✕ Close</button>
+  </div>
+  <div class="library-filter-row">
+    <input type="text" id="librarySubjectFilter" placeholder="Filter by subject (e.g. Maths, Biology)…">
+  </div>
+  <div class="library-list" id="libraryList">
+    <p class="library-empty">Loading…</p>
+  </div>
+  <p class="library-note">Papers here were uploaded by people using Study Buddy. Only real papers people have the right to share should be added — Study Buddy isn't affiliated with MANEB.</p>
+</div>
+
 <div id="tutorOverlay" class="read-overlay tutor-overlay">
   <div class="read-overlay-header">
     <div class="tutor-header-title">
@@ -850,6 +922,24 @@
 
 <script>
 const SHARE_ID = {{ share_id | tojson }};
+
+// --- Register service worker for offline app-shell caching ---
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/static/sw.js').catch(()=>{
+      // Offline caching is a nice-to-have — if registration fails, the app
+      // still works completely normally with a live connection.
+    });
+  });
+}
+
+// --- Offline indicator ---
+function updateOfflineBanner(){
+  document.getElementById('offlineBanner').style.display = navigator.onLine ? 'none' : 'block';
+}
+window.addEventListener('online', updateOfflineBanner);
+window.addEventListener('offline', updateOfflineBanner);
+updateOfflineBanner();
 
 // --- Splash screen ---
 (function(){
@@ -1222,9 +1312,28 @@ let examFinished = false;
 let examTimerInterval = null;
 let examSecondsLeft = 0;
 
-// --- Deck history (this session only) ---
-let deckHistory = [];
+// --- Deck history — persisted to localStorage so decks survive reloads
+// and can be reviewed even offline (generating NEW decks still needs a
+// live connection, but past decks are readable without one) ---
+const HISTORY_STORAGE_KEY = 'studybuddy_deck_history';
+let deckHistory = loadHistoryFromStorage();
 let activeHistoryId = null;
+renderHistoryChips();
+
+function loadHistoryFromStorage(){
+  try{
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function persistHistoryToStorage(){
+  try{
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(deckHistory));
+  }catch(e){ /* storage full or unavailable — history just won't persist, not critical */ }
+}
 
 function saveToHistory(){
   const id = Date.now();
@@ -1233,8 +1342,9 @@ function saveToHistory(){
     id, mode, examMode, deck: JSON.parse(JSON.stringify(deck)),
     title: snippet || 'Untitled deck'
   });
-  if(deckHistory.length > 10) deckHistory.pop();
+  if(deckHistory.length > 20) deckHistory.pop();
   activeHistoryId = id;
+  persistHistoryToStorage();
   renderHistoryChips();
 }
 
@@ -1248,7 +1358,7 @@ function renderHistoryChips(){
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'history-chip' + (entry.id === activeHistoryId ? ' active' : '');
-    const label = entry.examMode ? 'Exam' : (entry.mode === 'flashcards' ? 'Cards' : 'Quiz');
+    const label = entry.examMode ? 'Exam' : (entry.mode === 'flashcards' ? 'Cards' : entry.mode === 'pastpaper' ? 'Past Paper' : 'Quiz');
     chip.innerHTML = `${entry.title} <span class="hc-mode">· ${label}</span>`;
     chip.addEventListener('click', ()=> loadFromHistory(entry.id));
     chipsEl.appendChild(chip);
@@ -1288,7 +1398,74 @@ document.querySelectorAll('.mode-btn').forEach(btn=>{
     }
     const hint = document.getElementById('modeHint');
     hint.style.display = mode === 'pastpaper' ? 'block' : 'none';
+    document.getElementById('paperLibraryActions').style.display = mode === 'pastpaper' ? 'flex' : 'none';
   });
+});
+
+document.getElementById('saveToLibraryCheck').addEventListener('change', (e)=>{
+  document.getElementById('libraryMetaFields').style.display = e.target.checked ? 'flex' : 'none';
+});
+
+// --- Papers library browsing ---
+const libraryOverlay = document.getElementById('libraryOverlay');
+const libraryList = document.getElementById('libraryList');
+const librarySubjectFilter = document.getElementById('librarySubjectFilter');
+
+async function loadLibraryList(subject){
+  libraryList.innerHTML = '<p class="library-empty">Loading…</p>';
+  try{
+    const url = subject ? `/api/papers?subject=${encodeURIComponent(subject)}` : '/api/papers';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Could not load the library.');
+    if(!data.papers.length){
+      libraryList.innerHTML = '<p class="library-empty">No papers in the library yet — be the first to add one by generating in Past Paper mode with "save to library" checked.</p>';
+      return;
+    }
+    libraryList.innerHTML = '';
+    data.papers.forEach(paper=>{
+      const item = document.createElement('div');
+      item.className = 'library-item';
+      const metaParts = [paper.subject];
+      if(paper.year) metaParts.push(paper.year);
+      if(paper.school) metaParts.push(paper.school);
+      item.innerHTML = `
+        <div class="library-item-title">${paper.title}</div>
+        <div class="library-item-meta">${metaParts.join(' · ')}</div>
+      `;
+      item.addEventListener('click', ()=> loadPaperIntoForm(paper.id));
+      libraryList.appendChild(item);
+    });
+  }catch(err){
+    libraryList.innerHTML = `<p class="library-empty">⚠ ${err.message}</p>`;
+  }
+}
+
+async function loadPaperIntoForm(paperId){
+  try{
+    const resp = await fetch(`/api/papers/${paperId}`);
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Could not load this paper.');
+    document.getElementById('studyText').value = data.text;
+    libraryOverlay.classList.remove('active');
+    document.querySelector('.tab-btn[data-tab="paste"]')?.click();
+    showExtractStatus(`Loaded "${data.title}" from the library`, 'success');
+  }catch(err){
+    showExtractStatus(err.message, 'error');
+  }
+}
+
+document.getElementById('browseLibraryBtn').addEventListener('click', ()=>{
+  libraryOverlay.classList.add('active');
+  loadLibraryList();
+});
+document.getElementById('closeLibraryBtn').addEventListener('click', ()=>{
+  libraryOverlay.classList.remove('active');
+});
+let librarySearchTimeout = null;
+librarySubjectFilter.addEventListener('input', ()=>{
+  clearTimeout(librarySearchTimeout);
+  librarySearchTimeout = setTimeout(()=> loadLibraryList(librarySubjectFilter.value.trim()), 350);
 });
 
 const genBtn = document.getElementById('genBtn');
@@ -1311,6 +1488,29 @@ genBtn.addEventListener('click', async ()=>{
     errorMsg.style.display = 'block';
     return;
   }
+
+  // If in Past Paper mode with "save to library" checked, save it first
+  if(mode === 'pastpaper' && document.getElementById('saveToLibraryCheck').checked){
+    const subject = document.getElementById('paperSubject').value.trim();
+    if(!subject){
+      errorMsg.textContent = 'Please enter a subject to save this paper to the library.';
+      errorMsg.style.display = 'block';
+      return;
+    }
+    try{
+      await fetch('/api/papers', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          subject,
+          year: document.getElementById('paperYear').value.trim(),
+          school: document.getElementById('paperSchool').value.trim(),
+          text
+        })
+      });
+    }catch(e){ /* saving to library is a bonus — don't block generation if it fails */ }
+  }
+
   genBtn.disabled = true;
   spinnerWrap.style.display = 'flex';
   results.style.display = 'none';

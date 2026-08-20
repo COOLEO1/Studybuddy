@@ -86,6 +86,17 @@ def get_db():
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )"""
     )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS past_papers (
+            id TEXT PRIMARY KEY,
+            subject TEXT NOT NULL,
+            year TEXT,
+            school TEXT,
+            title TEXT NOT NULL,
+            text TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )"""
+    )
     return conn
 
 
@@ -283,6 +294,92 @@ def get_share(share_id):
     return jsonify({"mode": mode, "title": title, "deck": json.loads(data)})
 
 
+# ---------------------------------------------------------------------------
+# Past papers library — a shared, growing collection of REAL past papers
+# that people upload. This sidesteps auto-fetching papers from the internet
+# (no reliable source for MSCE specifically, plus real copyright risk) —
+# instead the library grows from what people who already have real papers
+# choose to contribute, tagged by subject/year/school so others can browse
+# and reuse them for Past Paper mode instead of re-uploading their own copy.
+# ---------------------------------------------------------------------------
+
+MAX_PAPER_CHARS = 40000
+
+
+@app.route("/api/papers", methods=["POST"])
+@limiter.limit("10 per minute")
+def add_paper():
+    data = request.get_json(silent=True) or {}
+    subject = (data.get("subject") or "").strip()[:60]
+    year = (data.get("year") or "").strip()[:20]
+    school = (data.get("school") or "").strip()[:120]
+    title = (data.get("title") or "").strip()[:150]
+    text = (data.get("text") or "").strip()
+
+    if not subject or not text:
+        return jsonify({"error": "Subject and paper text are required."}), 400
+    if len(text) > MAX_PAPER_CHARS:
+        return jsonify({"error": f"Paper is too long (max {MAX_PAPER_CHARS:,} characters)."}), 400
+    if not title:
+        title = f"{subject} {year}".strip()
+
+    paper_id = generate_share_id()
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO past_papers (id, subject, year, school, title, text) VALUES (?, ?, ?, ?, ?, ?)",
+            (paper_id, subject, year, school, title, text),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return jsonify({"id": paper_id})
+
+
+@app.route("/api/papers", methods=["GET"])
+def list_papers():
+    subject_filter = (request.args.get("subject") or "").strip()
+    conn = get_db()
+    try:
+        if subject_filter:
+            rows = conn.execute(
+                "SELECT id, subject, year, school, title, created_at FROM past_papers "
+                "WHERE subject LIKE ? ORDER BY created_at DESC LIMIT 100",
+                (f"%{subject_filter}%",),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, subject, year, school, title, created_at FROM past_papers "
+                "ORDER BY created_at DESC LIMIT 100"
+            ).fetchall()
+    finally:
+        conn.close()
+
+    papers = [
+        {"id": r[0], "subject": r[1], "year": r[2], "school": r[3], "title": r[4], "created_at": r[5]}
+        for r in rows
+    ]
+    return jsonify({"papers": papers})
+
+
+@app.route("/api/papers/<paper_id>", methods=["GET"])
+def get_paper(paper_id):
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT subject, year, school, title, text FROM past_papers WHERE id = ?", (paper_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return jsonify({"error": "Paper not found."}), 404
+
+    subject, year, school, title, text = row
+    return jsonify({"subject": subject, "year": year, "school": school, "title": title, "text": text})
+
+
 @app.route("/api/extract-file", methods=["POST"])
 @limiter.limit("15 per minute")
 def extract_file():
@@ -374,11 +471,11 @@ def tutor():
         return jsonify({"error": "Please type or say something first."}), 400
     if len(message) > 4000:
         return jsonify({"error": "That message is too long."}), 400
-    if not isinstance(history, list) or len(history) > 60:
+    if not isinstance(history, list) or len(history) > 400:
         return jsonify({"error": "Conversation too long — please start a new tutor session."}), 400
 
     messages = [{"role": "system", "content": TUTOR_SYSTEM_PROMPT}]
-    for turn in history[-40:]:
+    for turn in history[-50:]:
         role = turn.get("role")
         content = turn.get("content")
         if role in ("user", "assistant") and isinstance(content, str):
