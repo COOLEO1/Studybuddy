@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — Study Buddy</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink: #1B1F2A; --ink-2: #262B3A; --paper: #FBF8F1;
+    --amber: #E8A33D; --teal: #4C7A6E; --warn: #d65a50;
+    --text-light: #F5F1E8; --text-muted: #A9AFC3;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background: var(--ink); color: var(--text-light);
+    font-family:'IBM Plex Mono', monospace; min-height:100vh;
+  }
+  .wrap{ max-width: 1100px; margin:0 auto; padding: 28px 20px 80px; }
+  header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  h1{ font-family:'Fraunces', serif; font-size:22px; margin:0; }
+  .live-dot{
+    display:inline-block; width:8px; height:8px; border-radius:50%; background:#4C7A6E;
+    margin-right:6px; animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+  .header-actions{ display:flex; align-items:center; gap:14px; font-size:12px; color:var(--text-muted); }
+  .header-actions a{ color:var(--amber); text-decoration:none; }
+
+  .stat-grid{
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap:12px; margin-bottom:24px;
+  }
+  .stat-card{
+    background:var(--ink-2); border:1px solid rgba(255,255,255,0.08); border-radius:10px;
+    padding:16px 18px; opacity:0; transform:translateY(10px);
+    animation: cardIn .5s cubic-bezier(.2,.85,.3,1) forwards;
+    transition: transform .15s ease, border-color .15s ease;
+  }
+  .stat-card:hover{ transform: translateY(-2px); border-color: rgba(232,163,61,0.3); }
+  @keyframes cardIn{ to{ opacity:1; transform:translateY(0); } }
+  .stat-card .label{ font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:6px; }
+  .stat-card .value{ font-family:'Fraunces', serif; font-size:26px; font-weight:700; color:var(--amber); transition: opacity .2s ease; }
+
+  .panel-row{ display:grid; grid-template-columns: 1.4fr 1fr; gap:16px; margin-bottom:16px; }
+  @media (max-width:800px){ .panel-row{ grid-template-columns: 1fr; } }
+
+  .panel{
+    background:var(--ink-2); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:18px 20px;
+    opacity:0; transform:translateY(10px); animation: cardIn .5s cubic-bezier(.2,.85,.3,1) forwards;
+  }
+  .panel h2{ font-family:'Fraunces', serif; font-size:14px; margin:0 0 14px; color:var(--text-light); }
+  .panel-scroll{ max-height:340px; overflow-y:auto; }
+
+  table{ width:100%; border-collapse: collapse; font-size:12px; }
+  th{ text-align:left; color:var(--text-muted); font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.1); position:sticky; top:0; background:var(--ink-2); }
+  td{ padding:7px 8px; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--text-light); }
+  td.muted{ color:var(--text-muted); }
+  tbody tr{ transition: background .12s ease; }
+  tbody tr:hover{ background: rgba(232,163,61,0.06); }
+  .mono-small{ font-size:11px; }
+  .empty-row{ text-align:center; color:var(--text-muted); padding:20px; }
+
+  canvas{ max-height:220px; }
+
+  /* Stagger entrance timing across the stat cards and panels */
+  .stat-card:nth-child(1){ animation-delay: .02s; }
+  .stat-card:nth-child(2){ animation-delay: .06s; }
+  .stat-card:nth-child(3){ animation-delay: .10s; }
+  .stat-card:nth-child(4){ animation-delay: .14s; }
+  .stat-card:nth-child(5){ animation-delay: .18s; }
+  .stat-card:nth-child(6){ animation-delay: .22s; }
+  .stat-card:nth-child(7){ animation-delay: .26s; }
+  .panel-row:nth-of-type(1) .panel{ animation-delay: .1s; }
+  .panel-row:nth-of-type(2) .panel{ animation-delay: .18s; }
+
+  .value-flash{ animation: flash .5s ease; }
+  @keyframes flash{ 0%{ color:#fff; } 100%{ color:var(--amber); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="live-dot"></span>Study Buddy — Admin</h1>
+    <div class="header-actions">
+      <span id="lastUpdated">Live</span>
+      <a href="/admin/logout">Logout</a>
+    </div>
+  </header>
+
+  {% if no_db %}
+    <div class="panel">
+      <p style="color:var(--text-muted);">No database configured — set the <strong>DATABASE_URL</strong> environment variable (Supabase Postgres connection string) to enable analytics.</p>
+    </div>
+  {% else %}
+
+  <div class="stat-grid" id="statGrid">
+    <div class="stat-card"><div class="label">Active now (5min)</div><div class="value" id="stat-active">{{ active_last_5min }}</div></div>
+    <div class="stat-card"><div class="label">Unique visitors today</div><div class="value" id="stat-unique">{{ unique_ips_today }}</div></div>
+    <div class="stat-card"><div class="label">Total pageviews</div><div class="value" id="stat-pageviews">{{ total_pageviews }}</div></div>
+    <div class="stat-card"><div class="label">Decks generated</div><div class="value" id="stat-generations">{{ total_generations }}</div></div>
+    <div class="stat-card"><div class="label">Tutor messages</div><div class="value" id="stat-tutor">{{ total_tutor_msgs }}</div></div>
+    <div class="stat-card"><div class="label">Shared decks</div><div class="value" id="stat-shared">{{ total_shared_decks }}</div></div>
+    <div class="stat-card"><div class="label">Papers in library</div><div class="value" id="stat-papers">{{ total_papers }}</div></div>
+  </div>
+
+  <div class="panel-row">
+    <div class="panel">
+      <h2>Traffic — last 14 days</h2>
+      <canvas id="trafficChart"></canvas>
+    </div>
+    <div class="panel">
+      <h2>Generations by format</h2>
+      <canvas id="modeChart"></canvas>
+    </div>
+  </div>
+
+  <div class="panel-row">
+    <div class="panel">
+      <h2>Recent visits</h2>
+      <div class="panel-scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Page</th><th>IP</th><th>Device</th></tr></thead>
+          <tbody id="visitsBody">
+            {% for v in recent_visits %}
+            <tr>
+              <td class="muted mono-small">{{ v.at }}</td>
+              <td class="mono-small">{{ v.path }}</td>
+              <td class="mono-small">{{ v.ip }}</td>
+              <td class="muted mono-small">{{ v.device }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="empty-row">No visits yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Recent errors</h2>
+      <div class="panel-scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Context</th><th>Message</th></tr></thead>
+          <tbody id="errorsBody">
+            {% for e in recent_errors %}
+            <tr>
+              <td class="muted mono-small">{{ e.at }}</td>
+              <td class="mono-small">{{ e.context }}</td>
+              <td class="muted mono-small">{{ e.message }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="empty-row">No errors logged 🎉</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Top pages</h2>
+    <table>
+      <thead><tr><th>Path</th><th>Views</th></tr></thead>
+      <tbody id="pathsBody">
+        {% for p in views_by_path %}
+        <tr><td class="mono-small">{{ p.path }}</td><td class="mono-small">{{ p.count }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% endif %}
+</div>
+
+<script>
+{% if not no_db %}
+const trafficCtx = document.getElementById('trafficChart').getContext('2d');
+const modeCtx = document.getElementById('modeChart').getContext('2d');
+
+let initialDays = {{ views_by_day | tojson }};
+let initialModes = {{ generations_by_mode | tojson }};
+
+const trafficChart = new Chart(trafficCtx, {
+  type: 'line',
+  data: {
+    labels: initialDays.map(d => d.day),
+    datasets: [{
+      label: 'Pageviews', data: initialDays.map(d => d.count),
+      borderColor: '#E8A33D', backgroundColor: 'rgba(232,163,61,0.15)',
+      tension: 0.35, fill: true, pointRadius: 3, pointBackgroundColor: '#E8A33D',
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    animation: { duration: 700, easing: 'easeOutCubic' },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#A9AFC3', font: {size:10} }, grid: { color: 'rgba(255,255,255,0.05)' } },
+      y: { ticks: { color: '#A9AFC3', font: {size:10} }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero:true }
+    }
+  }
+});
+
+const modeChart = new Chart(modeCtx, {
+  type: 'bar',
+  data: {
+    labels: initialModes.map(m => m.mode),
+    datasets: [{
+      label: 'Generations', data: initialModes.map(m => m.count),
+      backgroundColor: ['#E8A33D','#4C7A6E','#8a8471','#d65a50'],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    animation: { duration: 700, easing: 'easeOutCubic' },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#A9AFC3', font: {size:10} }, grid: { display:false } },
+      y: { ticks: { color: '#A9AFC3', font: {size:10} }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero:true }
+    }
+  }
+});
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str == null ? '' : String(str);
+  return d.innerHTML;
+}
+
+function updateStatValue(id, newValue){
+  const el = document.getElementById(id);
+  if(el.textContent !== String(newValue)){
+    el.textContent = newValue;
+    el.classList.remove('value-flash');
+    void el.offsetWidth; // restart animation
+    el.classList.add('value-flash');
+  }
+}
+
+async function refreshStats(){
+  try{
+    const resp = await fetch('/admin/api/stats');
+    if(!resp.ok) return;
+    const data = await resp.json();
+
+    updateStatValue('stat-active', data.active_last_5min);
+    updateStatValue('stat-unique', data.unique_ips_today);
+    updateStatValue('stat-pageviews', data.total_pageviews);
+    updateStatValue('stat-generations', data.total_generations);
+    updateStatValue('stat-tutor', data.total_tutor_msgs);
+    updateStatValue('stat-shared', data.total_shared_decks);
+    updateStatValue('stat-papers', data.total_papers);
+
+    trafficChart.data.labels = data.views_by_day.map(d => d.day);
+    trafficChart.data.datasets[0].data = data.views_by_day.map(d => d.count);
+    trafficChart.update();
+
+    modeChart.data.labels = data.generations_by_mode.map(m => m.mode);
+    modeChart.data.datasets[0].data = data.generations_by_mode.map(m => m.count);
+    modeChart.update();
+
+    document.getElementById('visitsBody').innerHTML = data.recent_visits.length
+      ? data.recent_visits.map(v => `<tr>
+          <td class="muted mono-small">${escapeHtml(v.at)}</td>
+          <td class="mono-small">${escapeHtml(v.path)}</td>
+          <td class="mono-small">${escapeHtml(v.ip)}</td>
+          <td class="muted mono-small">${escapeHtml(v.device)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" class="empty-row">No visits yet</td></tr>';
+
+    document.getElementById('errorsBody').innerHTML = data.recent_errors.length
+      ? data.recent_errors.map(e => `<tr>
+          <td class="muted mono-small">${escapeHtml(e.at)}</td>
+          <td class="mono-small">${escapeHtml(e.context)}</td>
+          <td class="muted mono-small">${escapeHtml(e.message)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" class="empty-row">No errors logged 🎉</td></tr>';
+
+    document.getElementById('pathsBody').innerHTML = data.views_by_path.map(p =>
+      `<tr><td class="mono-small">${escapeHtml(p.path)}</td><td class="mono-small">${escapeHtml(p.count)}</td></tr>`
+    ).join('');
+
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  }catch(e){ /* silent — dashboard keeps showing last known data */ }
+}
+
+setInterval(refreshStats, 12000);
+{% endif %}
+</script>
+</body>
+</html>
