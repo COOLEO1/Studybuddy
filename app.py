@@ -8,6 +8,7 @@ import psycopg2
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, request, jsonify, render_template, session, redirect
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from pypdf import PdfReader
@@ -164,6 +165,21 @@ def init_db():
             id SERIAL PRIMARY KEY,
             created_at TIMESTAMP DEFAULT NOW()
         )""",
+        """CREATE TABLE IF NOT EXISTS site_content (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            about_title TEXT NOT NULL DEFAULT 'StudyBuddy',
+            developer_name TEXT NOT NULL DEFAULT 'Leon Mapelera',
+            developer_role TEXT NOT NULL DEFAULT 'Creator & Developer 🇲🇼',
+            tagline TEXT NOT NULL DEFAULT 'Building tools that make learning easier.',
+            story TEXT NOT NULL DEFAULT 'I love building useful tools people can actually use. StudyBuddy turns notes, articles, files, or photos into practical study material so learning feels less like a chore and more like a tool you want to use.',
+            quote TEXT NOT NULL DEFAULT 'Study smarter. Remember more.',
+            contact_email TEXT NOT NULL DEFAULT 'leoc39063@gmail.com',
+            privacy_text TEXT NOT NULL DEFAULT 'StudyBuddy does not require an account. Material is sent to the configured AI provider to generate study content. Avoid submitting sensitive information.',
+            terms_text TEXT NOT NULL DEFAULT 'StudyBuddy is provided as-is. AI-generated study material can contain mistakes, so verify important information against trusted sources.',
+            photo_data TEXT,
+            photo_mime TEXT,
+            updated_at TIMESTAMP DEFAULT NOW()
+        )""",
     ]
     conn = get_db_connection()
     try:
@@ -176,6 +192,18 @@ def init_db():
 
 
 init_db()
+
+
+def ensure_site_content():
+    if not DATABASE_URL:
+        return
+    try:
+        db_query("""INSERT INTO site_content (id) VALUES (1) ON CONFLICT (id) DO NOTHING""", commit=True)
+    except Exception:
+        pass
+
+
+ensure_site_content()
 
 
 def parse_device_summary(user_agent):
@@ -851,6 +879,19 @@ def gather_admin_stats():
         "SELECT COUNT(DISTINCT ip_address) FROM pageviews WHERE created_at > NOW() - INTERVAL '5 minutes'",
         fetchone=True,
     )[0]
+    generations_by_day = db_query(
+        "SELECT date(created_at) d, COUNT(*) c FROM generation_events WHERE created_at > NOW() - INTERVAL '14 days' GROUP BY d ORDER BY d", fetchall=True
+    )
+    tutor_by_day = db_query(
+        "SELECT date(created_at) d, COUNT(*) c FROM tutor_events WHERE created_at > NOW() - INTERVAL '14 days' GROUP BY d ORDER BY d", fetchall=True
+    )
+    device_rows = db_query(
+        "SELECT user_agent, COUNT(*) c FROM pageviews GROUP BY user_agent ORDER BY c DESC LIMIT 100", fetchall=True
+    )
+    device_counts = {}
+    for ua, c in device_rows:
+        device = parse_device_summary(ua).split(" · ")[0]
+        device_counts[device] = device_counts.get(device, 0) + c
 
     return {
         "total_pageviews": total_pageviews,
@@ -865,7 +906,71 @@ def gather_admin_stats():
         "recent_visits": recent_visits,
         "unique_ips_today": unique_ips_today,
         "active_last_5min": active_last_5min,
+        "generations_by_day": [{"day": str(d), "count": c} for d, c in generations_by_day],
+        "tutor_by_day": [{"day": str(d), "count": c} for d, c in tutor_by_day],
+        "device_breakdown": [{"device": k, "count": v} for k, v in sorted(device_counts.items(), key=lambda x: x[1], reverse=True)],
     }
+
+
+def get_site_content():
+    defaults = {
+        "about_title": "StudyBuddy",
+        "developer_name": "Leon Mapelera",
+        "developer_role": "Creator & Developer 🇲🇼",
+        "tagline": "Building tools that make learning easier.",
+        "story": "I love building useful tools people can actually use. StudyBuddy turns notes, articles, files, or photos into practical study material so learning feels less like a chore and more like a tool you want to use.",
+        "quote": "Study smarter. Remember more.",
+        "contact_email": "leoc39063@gmail.com",
+        "privacy_text": "StudyBuddy does not require an account. Material is sent to the configured AI provider to generate study content. Avoid submitting sensitive information.",
+        "terms_text": "StudyBuddy is provided as-is. AI-generated study material can contain mistakes, so verify important information against trusted sources.",
+        "photo_data": None, "photo_mime": None,
+    }
+    if not DATABASE_URL:
+        return defaults
+    try:
+        row = db_query("SELECT about_title, developer_name, developer_role, tagline, story, quote, contact_email, privacy_text, terms_text, photo_data, photo_mime FROM site_content WHERE id=1", fetchone=True)
+        if not row:
+            return defaults
+        keys = list(defaults.keys())
+        return dict(zip(keys, row))
+    except Exception:
+        return defaults
+
+
+@app.route("/api/site-content")
+def site_content_api():
+    return jsonify(get_site_content())
+
+
+@app.route("/admin/content", methods=["POST"])
+def admin_update_content():
+    if not require_admin():
+        return jsonify({"error": "Not authorized."}), 403
+    if not DATABASE_URL:
+        return jsonify({"error": "No database configured."}), 500
+    fields = ["about_title","developer_name","developer_role","tagline","story","quote","contact_email","privacy_text","terms_text"]
+    values = [request.form.get(f, "").strip() for f in fields]
+    photo_data = None
+    photo_mime = None
+    photo = request.files.get("photo")
+    if photo and photo.filename:
+        allowed = {"image/jpeg":"jpg", "image/png":"png", "image/webp":"webp"}
+        if photo.mimetype not in allowed:
+            return jsonify({"error": "Photo must be JPG, PNG, or WebP."}), 400
+        raw = photo.read()
+        if len(raw) > 2 * 1024 * 1024:
+            return jsonify({"error": "Photo must be 2MB or smaller."}), 400
+        photo_data = "data:" + photo.mimetype + ";base64," + base64.b64encode(raw).decode("ascii")
+        photo_mime = photo.mimetype
+    current = get_site_content()
+    if not values[0]:
+        return jsonify({"error": "About title is required."}), 400
+    if photo_data is None:
+        photo_data, photo_mime = current.get("photo_data"), current.get("photo_mime")
+    db_query("""INSERT INTO site_content (id, about_title, developer_name, developer_role, tagline, story, quote, contact_email, privacy_text, terms_text, photo_data, photo_mime, updated_at)
+        VALUES (1,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
+        ON CONFLICT (id) DO UPDATE SET about_title=EXCLUDED.about_title, developer_name=EXCLUDED.developer_name, developer_role=EXCLUDED.developer_role, tagline=EXCLUDED.tagline, story=EXCLUDED.story, quote=EXCLUDED.quote, contact_email=EXCLUDED.contact_email, privacy_text=EXCLUDED.privacy_text, terms_text=EXCLUDED.terms_text, photo_data=EXCLUDED.photo_data, photo_mime=EXCLUDED.photo_mime, updated_at=NOW()""", tuple(values+[photo_data,photo_mime]), commit=True)
+    return jsonify({"ok": True, "content": get_site_content()})
 
 
 @app.route("/admin")
@@ -873,9 +978,9 @@ def admin_dashboard():
     if not require_admin():
         return redirect("/admin/login")
     if not DATABASE_URL:
-        return render_template("admin_dashboard.html", no_db=True)
+        return render_template("admin_dashboard.html", no_db=True, content=get_site_content())
     stats = gather_admin_stats()
-    return render_template("admin_dashboard.html", no_db=False, **stats)
+    return render_template("admin_dashboard.html", no_db=False, content=get_site_content(), **stats)
 
 
 @app.route("/admin/api/stats")

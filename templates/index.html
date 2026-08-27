@@ -22,7 +22,7 @@
 <meta name="apple-mobile-web-app-title" content="Study Buddy">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
@@ -48,7 +48,7 @@
       radial-gradient(circle at 15% 10%, rgba(232,163,61,0.07), transparent 40%),
       radial-gradient(circle at 85% 90%, rgba(76,122,110,0.10), transparent 40%);
     color: var(--text-light);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'Inter', sans-serif;
     min-height: 100vh;
   }
   .wrap{ max-width: 780px; margin: 0 auto; padding: 56px 24px 120px; }
@@ -59,7 +59,7 @@
     color: var(--amber); margin-bottom: 14px; font-weight:600;
   }
   h1{
-    font-family: 'Fraunces', serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 600;
     font-size: clamp(38px, 6vw, 58px);
     line-height: 1.04;
@@ -98,7 +98,7 @@
   .input-tabs{ display:flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
   .tab-btn{
     padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
-    background: var(--ink); color: var(--text-muted); font-family: 'IBM Plex Mono', monospace;
+    background: var(--ink); color: var(--text-muted); font-family: 'Inter', sans-serif;
     font-size: 12px; cursor:pointer; transition: all .15s ease;
   }
   .tab-btn.active{ background: var(--teal); color: var(--text-light); border-color: var(--teal); font-weight:600; }
@@ -112,11 +112,11 @@
   .url-row input{ min-width: 180px; }
   .url-row input{
     flex:1; padding: 12px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
-    background: var(--ink); color: var(--text-light); font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    background: var(--ink); color: var(--text-light); font-family: 'Inter', sans-serif; font-size: 13px;
   }
   .fetch-btn{
     padding: 12px 20px; border-radius: 6px; border: none; background: var(--teal);
-    color: var(--text-light); font-family:'IBM Plex Mono', monospace; font-size: 13px;
+    color: var(--text-light); font-family:'Inter', sans-serif; font-size: 13px;
     font-weight:600; cursor:pointer;
   }
   .fetch-btn:disabled{ opacity:0.5; cursor:not-allowed; }
@@ -134,12 +134,12 @@
     width:100%; min-height: 160px; resize: vertical;
     background: var(--paper); color: var(--text-dark);
     border: none; border-radius: 6px; padding: 16px;
-    font-family: 'IBM Plex Mono', monospace; font-size: 14px; line-height: 1.6;
+    font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.6;
     background-image: repeating-linear-gradient(var(--paper) 0px, var(--paper) 27px, var(--paper-line) 28px);
   }
   .fullscreen-btn{
     margin-top: 10px; padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
-    background: transparent; color: var(--text-muted); font-family:'IBM Plex Mono', monospace;
+    background: transparent; color: var(--text-muted); font-family:'Inter', sans-serif;
     font-size: 12px; cursor:pointer; transition: all .15s ease;
   }
   .fullscreen-btn:hover{ border-color: var(--amber); color: var(--amber); }
@@ -152,17 +152,17 @@
   .read-overlay.active{ display:flex; }
   .read-overlay-header{
     display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;
-    font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-transform:uppercase;
+    font-family: 'Inter', sans-serif; font-size: 12px; text-transform:uppercase;
     letter-spacing: 0.1em; color: var(--text-muted);
   }
   .read-close-btn{
     padding: 8px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.16);
-    background: var(--ink-2); color: var(--text-light); font-family:'IBM Plex Mono', monospace;
+    background: var(--ink-2); color: var(--text-light); font-family:'Inter', sans-serif;
     font-size: 12px; cursor:pointer;
   }
   .read-overlay-text{
     flex:1; width:100%; resize:none; background: var(--paper); color: var(--text-dark);
-    border:none; border-radius: 8px; padding: 24px; font-family:'IBM Plex Mono', monospace;
+    border:none; border-radius: 8px; padding: 24px; font-family:'Inter', sans-serif;
     font-size: 15px; line-height: 1.8;
     background-image: repeating-linear-gradient(var(--paper) 0px, var(--paper) 33px, var(--paper-line) 34px);
   }
@@ -171,11 +171,11 @@
     padding: 8px 4px 40px;
   }
   .about-content h2{
-    font-family:'Fraunces', serif; font-size: 26px; color: var(--text-light); margin: 0 0 4px;
+    font-family:'Plus Jakarta Sans', sans-serif; font-size: 26px; color: var(--text-light); margin: 0 0 4px;
   }
-  .about-tagline{ color: var(--amber); font-size: 13px; margin: 0 0 28px; font-family:'IBM Plex Mono', monospace; }
+  .about-tagline{ color: var(--amber); font-size: 13px; margin: 0 0 28px; font-family:'Inter', sans-serif; }
   .about-content h3{
-    font-family:'IBM Plex Mono', monospace; font-size: 12px; text-transform:uppercase; letter-spacing:0.1em;
+    font-family:'Inter', sans-serif; font-size: 12px; text-transform:uppercase; letter-spacing:0.1em;
     color: var(--teal); margin: 26px 0 10px;
   }
   .about-content p{ font-size: 13px; line-height: 1.75; color: var(--text-muted); margin: 0 0 12px; }
@@ -188,7 +188,7 @@
   .tutor-entry-btn{
     width:100%; margin-bottom: 28px; padding: 16px; border-radius: 8px;
     border: 1px solid var(--teal); background: rgba(76,122,110,0.12); color: var(--text-light);
-    font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight:600; cursor:pointer;
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight:600; cursor:pointer;
     transition: all .15s ease;
   }
   .tutor-entry-btn:hover{ background: rgba(76,122,110,0.22); }
@@ -196,7 +196,7 @@
   /* --- Tutor chat overlay --- */
   .tutor-overlay{ padding: 0; }
   .tutor-overlay .read-overlay-header{ padding: 16px 20px; margin-bottom: 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .tutor-header-title{ display:flex; align-items:center; gap: 10px; font-family:'Fraunces', serif; font-size: 16px; color: var(--text-light); text-transform: none; letter-spacing: normal; }
+  .tutor-header-title{ display:flex; align-items:center; gap: 10px; font-family:'Plus Jakarta Sans', sans-serif; font-size: 16px; color: var(--text-light); text-transform: none; letter-spacing: normal; }
   .tutor-badge{
     width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--amber);
     display:flex; align-items:center; justify-content:center; font-size: 15px; flex-shrink:0;
@@ -204,7 +204,7 @@
   .tutor-header-actions{ display:flex; gap: 8px; align-items:center; }
   .tutor-voice-toggle{
     padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.16);
-    background: var(--ink-2); color: var(--text-muted); font-family:'IBM Plex Mono', monospace;
+    background: var(--ink-2); color: var(--text-muted); font-family:'Inter', sans-serif;
     font-size: 11px; cursor:pointer;
   }
   .tutor-voice-toggle.active{ border-color: var(--amber); color: var(--amber); }
@@ -215,7 +215,7 @@
   }
   .subject-chip{
     padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14);
-    background: var(--ink-2); color: var(--text-light); font-family:'IBM Plex Mono', monospace;
+    background: var(--ink-2); color: var(--text-light); font-family:'Inter', sans-serif;
     font-size: 12px; cursor:pointer; white-space:nowrap; transition: all .15s ease; flex-shrink:0;
   }
   .subject-chip:hover, .subject-chip.active{ border-color: var(--amber); color: var(--amber); background: rgba(232,163,61,0.08); }
@@ -269,11 +269,11 @@
   .tutor-input{
     flex:1; resize:none; background: var(--ink); color: var(--text-light);
     border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; padding: 10px 12px;
-    font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height:1.5; max-height: 100px;
+    font-family: 'Inter', sans-serif; font-size: 13px; line-height:1.5; max-height: 100px;
   }
   .tutor-mic-btn, .tutor-send-btn{
     padding: 10px 14px; border-radius: 8px; border: none; cursor:pointer;
-    font-family:'IBM Plex Mono', monospace; font-size: 13px; flex-shrink:0;
+    font-family:'Inter', sans-serif; font-size: 13px; flex-shrink:0;
   }
   .tutor-mic-btn{ background: var(--ink-2); color: var(--text-light); border: 1px solid rgba(255,255,255,0.14); }
   .tutor-mic-btn.recording{ background: #b8493e; color: #fff; }
@@ -293,7 +293,7 @@
   }
   .about-facts li{
     font-size: 13px; color: var(--text-light); line-height: 1.9;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'Inter', sans-serif;
   }
   .about-list{
     list-style: none; margin: 0 0 12px; padding: 0;
@@ -311,7 +311,7 @@
   .field{ flex: 1; min-width: 140px; }
   select, input[type=number]{
     width:100%; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
-    background: var(--ink); color: var(--text-light); font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    background: var(--ink); color: var(--text-light); font-family: 'Inter', sans-serif; font-size: 13px;
   }
   .mode-toggle{ display:flex; gap: 8px; flex-wrap: wrap; }
 
@@ -350,7 +350,7 @@
     margin: -32px 0 0 -32px; border-radius: 50%;
     background: var(--ink); border: 2px solid var(--amber);
     display:flex; align-items:center; justify-content:center;
-    font-family: 'Fraunces', serif; font-weight: 700; font-size: 22px; color: var(--amber);
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 22px; color: var(--amber);
     opacity: 0; transform: scale(0.4) rotate(-25deg);
     animation: badgeIn 0.55s cubic-bezier(.2,.9,.3,1) forwards;
     animation-delay: 0.95s;
@@ -368,18 +368,18 @@
     100%{ opacity: 0; transform: scale(1.6); }
   }
   .splash-title{
-    font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(26px, 6.5vw, 36px);
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: clamp(26px, 6.5vw, 36px);
     color: var(--text-light); margin: 0; opacity: 0; letter-spacing: -0.01em;
     animation: fadeUp 0.6s ease forwards; animation-delay: 1.25s;
   }
   .splash-title em{ font-style: italic; color: var(--amber); }
   .splash-byline{
-    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    font-family: 'Inter', sans-serif; font-size: 13px;
     color: var(--text-light); margin-top: 16px; opacity: 0; font-weight: 600;
     animation: fadeUp 0.6s ease forwards; animation-delay: 1.42s;
   }
   .splash-location{
-    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    font-family: 'Inter', sans-serif; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--text-muted); margin-top: 6px; opacity: 0;
     animation: fadeUp 0.6s ease forwards; animation-delay: 1.55s;
   }
@@ -393,7 +393,7 @@
   }
   .mode-btn{
     flex:1; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
-    background: var(--ink); color: var(--text-muted); font-family: 'IBM Plex Mono', monospace;
+    background: var(--ink); color: var(--text-muted); font-family: 'Inter', sans-serif;
     font-size: 13px; cursor:pointer; transition: all .15s ease;
   }
   .mode-btn.active{ background: var(--amber); color: var(--ink); border-color: var(--amber); font-weight:600; }
@@ -404,7 +404,7 @@
   .paper-library-actions{ margin-top: 10px; display:flex; flex-direction:column; gap: 8px; }
   .library-btn{
     align-self:flex-start; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--teal);
-    background: rgba(76,122,110,0.1); color: var(--text-light); font-family:'IBM Plex Mono', monospace;
+    background: rgba(76,122,110,0.1); color: var(--text-light); font-family:'Inter', sans-serif;
     font-size: 12px; cursor:pointer;
   }
   .library-btn:hover{ background: rgba(76,122,110,0.2); }
@@ -414,7 +414,7 @@
   .library-meta-fields{ display:flex; flex-direction:column; gap: 6px; margin-left: 22px; }
   .library-meta-fields input{
     padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
-    background: var(--ink); color: var(--text-light); font-family:'IBM Plex Mono', monospace; font-size: 12px;
+    background: var(--ink); color: var(--text-light); font-family:'Inter', sans-serif; font-size: 12px;
   }
 
   /* --- Papers library overlay --- */
@@ -423,7 +423,7 @@
   .library-filter-row{ padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .library-filter-row input{
     width:100%; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
-    background: var(--ink); color: var(--text-light); font-family:'IBM Plex Mono', monospace; font-size: 13px;
+    background: var(--ink); color: var(--text-light); font-family:'Inter', sans-serif; font-size: 13px;
   }
   .library-list{ flex:1; overflow-y:auto; padding: 14px 20px; max-width: 640px; margin: 0 auto; width:100%; }
   .library-empty{ font-size: 13px; color: var(--text-muted); text-align:center; padding: 30px 0; }
@@ -432,8 +432,8 @@
     cursor:pointer; transition: transform .1s ease;
   }
   .library-item:hover{ transform: translateY(-1px); }
-  .library-item-title{ font-family:'Fraunces', serif; font-size: 15px; color: var(--text-dark); margin-bottom: 4px; }
-  .library-item-meta{ font-size: 11px; color: #6b6553; font-family:'IBM Plex Mono', monospace; }
+  .library-item-title{ font-family:'Plus Jakarta Sans', sans-serif; font-size: 15px; color: var(--text-dark); margin-bottom: 4px; }
+  .library-item-meta{ font-size: 11px; color: #6b6553; font-family:'Inter', sans-serif; }
   .library-note{
     font-size: 11px; color: var(--text-muted); padding: 12px 20px; text-align:center;
     border-top: 1px solid rgba(255,255,255,0.06); margin: 0;
@@ -441,7 +441,7 @@
 
   .generate-btn{
     margin-top: 24px; width:100%; padding: 15px; border:none; border-radius: 7px;
-    background: var(--amber); color: var(--ink); font-family: 'IBM Plex Mono', monospace;
+    background: var(--amber); color: var(--ink); font-family: 'Inter', sans-serif;
     font-size: 14px; font-weight:600; letter-spacing:0.02em; cursor:pointer;
     transition: transform .1s ease, background .15s ease;
   }
@@ -464,7 +464,7 @@
   .deck-count{ font-size: 13px; color: var(--text-muted); }
   .deck-header-right{ display:flex; align-items:center; gap: 10px; }
   .exam-timer{
-    font-family:'IBM Plex Mono', monospace; font-size: 12px; font-weight:600;
+    font-family:'Inter', sans-serif; font-size: 12px; font-weight:600;
     color: var(--teal); border: 1px solid var(--teal); border-radius: 999px; padding: 4px 10px;
   }
   .exam-timer.warning{ color: #F4A8A0; border-color: #d65a50; }
@@ -479,14 +479,14 @@
     margin-bottom: 20px;
   }
   .exam-score .score-big{
-    font-family:'Fraunces', serif; font-size: 42px; font-weight:700; color: var(--amber); display:block;
+    font-family:'Plus Jakarta Sans', sans-serif; font-size: 42px; font-weight:700; color: var(--amber); display:block;
   }
   .exam-score .score-label{ font-size: 12px; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; }
   .exam-review-item{
     background: var(--paper); border-radius: 6px; padding: 16px; margin-bottom: 10px;
   }
-  .exam-review-q{ font-family:'Fraunces', serif; font-size: 15px; color: var(--text-dark); margin-bottom: 10px; }
-  .exam-review-answer{ font-size: 12px; font-family:'IBM Plex Mono', monospace; padding: 4px 0; }
+  .exam-review-q{ font-family:'Plus Jakarta Sans', sans-serif; font-size: 15px; color: var(--text-dark); margin-bottom: 10px; }
+  .exam-review-answer{ font-size: 12px; font-family:'Inter', sans-serif; padding: 4px 0; }
   .exam-review-answer.correct{ color: #2f6b56; }
   .exam-review-answer.incorrect{ color: #b8493e; }
   .exam-review-explain{ font-size: 11px; color: #6b6553; font-style:italic; margin-top: 6px; }
@@ -510,7 +510,7 @@
     color: var(--teal); font-weight:600; margin-bottom: 14px; margin-left: 26px;
   }
   .card-text{
-    font-family: 'Fraunces', serif; font-size: clamp(17px, 4.5vw, 22px); line-height: 1.45;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(17px, 4.5vw, 22px); line-height: 1.45;
     color: var(--text-dark); font-weight:500; word-break: break-word;
   }
   .card-hint{
@@ -520,7 +520,7 @@
   .quiz-options{ display:flex; flex-direction:column; gap: 10px; margin-top: 18px; }
   .quiz-opt{
     text-align:left; padding: 12px 14px; border-radius: 5px; border: 1.5px solid var(--paper-line);
-    background: transparent; font-family:'IBM Plex Mono', monospace; font-size: 14px; line-height: 1.45;
+    background: transparent; font-family:'Inter', sans-serif; font-size: 14px; line-height: 1.45;
     cursor:pointer; color: var(--text-dark); word-break: break-word;
   }
   .quiz-opt.correct{ background: rgba(76,122,110,0.18); border-color: var(--teal); }
@@ -530,14 +530,14 @@
   .nav-row{ display:flex; justify-content:space-between; align-items:center; gap: 10px; }
   .nav-btn{
     padding: 10px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
-    background: var(--ink-2); color: var(--text-light); font-family:'IBM Plex Mono', monospace;
+    background: var(--ink-2); color: var(--text-light); font-family:'Inter', sans-serif;
     font-size: 13px; cursor:pointer; flex: 1;
   }
   .nav-btn:disabled{ opacity:0.35; cursor:not-allowed; }
   .flip-btn{ background: var(--teal); border-color: var(--teal); color: var(--text-light); font-weight:600; flex: 0 0 auto; }
   .download-btn{
     flex: 1; margin-top: 0; padding: 12px; border-radius: 6px; border: 1px dashed rgba(255,255,255,0.2);
-    background: transparent; color: var(--text-muted); font-family:'IBM Plex Mono', monospace;
+    background: transparent; color: var(--text-muted); font-family:'Inter', sans-serif;
     font-size: 12px; cursor:pointer; transition: all .15s ease;
   }
   .download-btn:hover{ border-color: var(--amber); color: var(--amber); }
@@ -547,11 +547,11 @@
   }
   .share-result input{
     flex:1; padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
-    background: var(--ink); color: var(--amber); font-family:'IBM Plex Mono', monospace; font-size: 12px;
+    background: var(--ink); color: var(--amber); font-family:'Inter', sans-serif; font-size: 12px;
   }
   .copy-share-btn{
     padding: 10px 16px; border-radius: 6px; border: none; background: var(--amber);
-    color: var(--ink); font-family:'IBM Plex Mono', monospace; font-size: 12px; font-weight:600; cursor:pointer;
+    color: var(--ink); font-family:'Inter', sans-serif; font-size: 12px; font-weight:600; cursor:pointer;
   }
   .copy-share-btn.copied{ background: var(--teal); color: var(--text-light); }
 
@@ -570,7 +570,7 @@
   }
   .hiw-step{ display:flex; align-items:center; gap: 10px; }
   .hiw-num{
-    font-family: 'Fraunces', serif; font-size: 13px; font-weight:600; color: var(--amber);
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight:600; color: var(--amber);
     border: 1px solid rgba(232,163,61,0.4); border-radius: 50%; width: 26px; height:26px;
     display:flex; align-items:center; justify-content:center; flex-shrink:0;
   }
@@ -584,7 +584,7 @@
   .quickstart-label{ font-size: 12px; color: var(--text-muted); margin-right: 2px; }
   .chip{
     padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14);
-    background: transparent; color: var(--text-light); font-family:'IBM Plex Mono', monospace;
+    background: transparent; color: var(--text-light); font-family:'Inter', sans-serif;
     font-size: 12px; cursor:pointer; transition: all .15s ease;
   }
   .chip:hover{ border-color: var(--amber); color: var(--amber); }
@@ -599,7 +599,7 @@
   .history-chip{
     display:flex; align-items:center; gap: 6px; padding: 7px 12px; border-radius: 999px;
     border: 1px solid rgba(255,255,255,0.14); background: var(--ink-2); color: var(--text-light);
-    font-family:'IBM Plex Mono', monospace; font-size: 11px; cursor:pointer; transition: all .15s ease;
+    font-family:'Inter', sans-serif; font-size: 11px; cursor:pointer; transition: all .15s ease;
   }
   .history-chip:hover{ border-color: var(--teal); }
   .history-chip.active{ border-color: var(--amber); color: var(--amber); }
@@ -635,6 +635,26 @@
   @media (prefers-reduced-motion: reduce){
     .card, .generate-btn{ transition: none; }
   }
+
+  /* StudyBuddy Midnight Scholar redesign */
+  :root{--ink:#0B1020;--ink-2:#11182B;--paper:#F7F8FC;--paper-line:#E2E8F0;--amber:#6366F1;--teal:#22D3EE;--text-dark:#172033;--text-light:#F8FAFC;--text-muted:#94A3B8;--violet:#8B5CF6;--line:#26334D}
+  body{background:radial-gradient(circle at 8% 0,rgba(99,102,241,.14),transparent 35%),radial-gradient(circle at 95% 90%,rgba(34,211,238,.08),transparent 32%),var(--ink);font-family:'Inter',sans-serif;letter-spacing:-.01em}
+  .wrap{max-width:940px;padding-top:42px}
+  .panel,.how-it-works{background:rgba(17,24,43,.82);border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.12)}
+  .panel{padding:24px}.eyebrow{color:#A5B4FC;font-weight:700}h1{letter-spacing:-.04em}h1 em{color:#A5B4FC}.sub{color:#AAB6CA}
+  .mini-card{border-top-color:#22D3EE}.mini-card:nth-child(2){border-top-color:#6366F1}.mini-card:nth-child(3){border-top-color:#8B5CF6}
+  .tab-btn,.mode-btn,.fullscreen-btn,.library-btn,.download-btn{border-color:var(--line);background:#0F172A;color:#AAB6CA;border-radius:10px}
+  .tab-btn.active,.mode-btn.active{background:linear-gradient(135deg,#6366F1,#8B5CF6);border-color:transparent;color:#fff;box-shadow:0 8px 24px rgba(99,102,241,.2)}
+  .drop-zone{border-color:#334155;background:rgba(15,23,42,.35);border-radius:12px}.drop-zone:hover,.drop-zone.dragover{border-color:#6366F1;background:rgba(99,102,241,.07)}
+  textarea,.extract-preview{background:#F8FAFC;color:#172033;border-radius:12px;background-image:none}
+  .generate-btn,.fetch-btn,.tutor-entry-btn{background:linear-gradient(135deg,#6366F1,#8B5CF6);border-color:transparent;box-shadow:0 12px 30px rgba(99,102,241,.18);border-radius:12px}
+  .tutor-entry-btn{background:linear-gradient(135deg,rgba(99,102,241,.16),rgba(34,211,238,.08));border:1px solid rgba(99,102,241,.45);box-shadow:none}
+  .how-it-works{padding:16px 18px}.hiw-num{color:#A5B4FC;border-color:rgba(99,102,241,.45)}
+  .chip,.history-chip{border-color:var(--line);background:#0F172A}.chip:hover,.history-chip:hover{border-color:#6366F1;color:#A5B4FC}
+  .about-avatar{width:108px;height:108px;border-radius:28px;object-fit:cover;border:2px solid #6366F1;box-shadow:0 16px 40px rgba(0,0,0,.3);display:block;margin:4px auto 18px;background:#151E33}
+  .about-hero{text-align:center;padding:18px 0 8px}.about-hero h2{font-size:28px}.about-hero .about-tagline{color:#A5B4FC}.about-quote{margin:18px auto;padding:16px;border:1px solid var(--line);background:#11182B;border-radius:14px;color:#CBD5E1;text-align:center;font-weight:600}
+  .about-content h3{color:#67E8F9}.about-content a{color:#A5B4FC}.about-facts li,.about-list li{color:#AAB6CA}
+  @media(max-width:640px){.wrap{padding-top:28px}.panel{padding:18px}h1{font-size:38px}.about-avatar{width:94px;height:94px}}
 </style>
 </head>
 <body>
@@ -844,45 +864,21 @@
     <button type="button" id="closeAboutBtn" class="read-close-btn">✕ Close</button>
   </div>
   <div class="about-content">
-    <h2>Study Buddy</h2>
-    <p class="about-tagline">Built by Leon Mapelera, from Zomba, Malawi.</p>
-
-    <ul class="about-facts">
-      <li>✓ Free to use, no account needed</li>
-      <li>✓ No sign-up, no cross-site tracking, no ads</li>
-      <li>✓ Your notes aren't stored after your deck is generated</li>
-      <li>✓ Text is sent to Mistral AI to generate your deck</li>
-    </ul>
-
+    <div class="about-hero">
+      <img id="aboutAvatar" class="about-avatar" src="/static/icons/icon-512.png" alt="Developer photo">
+      <h2 id="aboutTitle">StudyBuddy</h2>
+      <p id="developerRole" class="about-tagline">Creator &amp; Developer 🇲🇼</p>
+      <p id="aboutTagline" class="about-fine">Building tools that make learning easier.</p>
+    </div>
+    <div id="aboutQuote" class="about-quote">Study smarter. Remember more.</div>
     <h3>Why I built this</h3>
-    <p>I'm Leon. I love building useful tools people can actually use. Studying the same material for too long is a drag — so Study Buddy turns it into flashcards, quizzes, or exams instead. Paste it in, get a deck, go. Work smart 🧠 not hard.</p>
-
+    <p id="aboutStory">I'm Leon. I love building useful tools people can actually use.</p>
     <h3>What it does</h3>
-    <p>Turns notes, articles, files, or photos into a study deck using AI.</p>
-    <ul class="about-list">
-      <li>Paste text, or drop in a URL, PDF, DOCX, TXT, or photo</li>
-      <li>Choose flashcards, a quiz, or a timed exam</li>
-      <li>Long material (even a full play or book chapter) is handled automatically, split into sections behind the scenes</li>
-    </ul>
-
-    <h3>Privacy — the short version</h3>
-    <ul class="about-list">
-      <li><strong>No accounts.</strong> Nothing to sign up for, no password, no profile.</li>
-      <li><strong>Nothing stored long-term,</strong> except decks you explicitly create a share link for, and papers submitted to the shared library — kept so those links and papers keep working for everyone.</li>
-      <li><strong>Your text goes to Mistral AI</strong> (a third party) to generate your deck. Avoid pasting anything sensitive you wouldn't want an AI service processing.</li>
-      <li><strong>Basic visit logging.</strong> To keep the site reliable, secure, and free from abuse, each page visit logs the page, your IP address, and a general device/browser summary (e.g. "Android · Chrome"). This is used only for rate-limiting, catching bugs, and detecting abuse — it's visible only to the site admin, not shared, sold, or used for advertising.</li>
-      <li><strong>Rate-limited by IP</strong> (10 requests/min, 60/hour) to keep the app free for everyone.</li>
-      <li><strong>Hosted on Render,</strong> which may independently log standard server data for its own security purposes, separate from anything Study Buddy itself does.</li>
-    </ul>
-
-    <h3>Contact & source</h3>
-    <ul class="about-list">
-      <li>Email: <a href="mailto:leoc39063@gmail.com">leoc39063@gmail.com</a></li>
-      <li>Source code: <a href="https://github.com/COOLEO1/Studybuddy" target="_blank" rel="noopener">github.com/COOLEO1/Studybuddy</a></li>
-    </ul>
-
-    <h3>Fine print</h3>
-    <p class="about-fine">Free, provided as-is, no uptime guarantee. AI can get things wrong — double-check anything that actually matters (like exam material) against a real source.</p>
+    <p>Turns notes, articles, files, or photos into practical study material using AI.</p>
+    <ul class="about-list"><li>Paste text, or drop in a URL, PDF, DOCX, TXT, or photo</li><li>Choose flashcards, a quiz, or a timed exam</li><li>Long material is handled automatically behind the scenes</li></ul>
+    <h3>Privacy</h3><p id="privacyText">StudyBuddy does not require an account. Avoid submitting sensitive information.</p>
+    <h3>Contact</h3><p>Email: <a id="contactEmail" href="mailto:leoc39063@gmail.com">leoc39063@gmail.com</a></p>
+    <h3>Fine print</h3><p id="termsText" class="about-fine">AI can get things wrong — double-check anything that actually matters against a trusted source.</p>
   </div>
 </div>
 
@@ -1963,6 +1959,10 @@ document.getElementById('resetLink').addEventListener('click', (e)=>{
   document.getElementById('studyText').value = '';
   window.scrollTo({top:0, behavior:'smooth'});
 });
+</script>
+
+<script>
+(async function loadSiteContent(){try{const r=await fetch('/api/site-content');if(!r.ok)return;const c=await r.json();const set=(id,v)=>{const e=document.getElementById(id);if(e&&v)e.textContent=v};set('aboutTitle',c.about_title);set('developerRole',c.developer_role);set('aboutTagline',c.tagline);set('aboutStory',c.story);set('aboutQuote',c.quote);set('privacyText',c.privacy_text);set('termsText',c.terms_text);if(c.contact_email){const e=document.getElementById('contactEmail');e.textContent=c.contact_email;e.href='mailto:'+c.contact_email}if(c.photo_data)document.getElementById('aboutAvatar').src=c.photo_data}catch(e){}})();
 </script>
 </body>
 </html>
